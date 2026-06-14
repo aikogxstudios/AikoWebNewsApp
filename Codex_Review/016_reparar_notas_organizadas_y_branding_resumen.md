@@ -68,3 +68,13 @@ La prueba comprobó:
 - Probar con notas reales de varios proyectos AikoGx.
 - Ampliar diccionario de patrones de UI, bugs, pruebas y material visual.
 - Conectar esta organización con futuras plantillas por tipo de contenido.
+
+## Revalidacion 2026-06-14
+
+- Se volvio a leer la tarea `Aiko_To_Codex/016_reparar_notas_organizadas_y_branding.md`.
+- Se comprobo la issue #4 del repositorio; no habia comentarios adicionales.
+- Se ejecuto `dotnet build -c Release` correctamente.
+- Se ejecuto de nuevo una prueba temporal con la nota caotica indicada por Aiko.
+- Resultado de validacion: `ISSUE_4_BRANDING_NOTES_TEST_OK`.
+- No hizo falta modificar la logica de WordPress borradores.
+- No se hizo rediseño visual grande.
