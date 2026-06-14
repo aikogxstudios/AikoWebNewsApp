@@ -35,6 +35,9 @@ public partial class Form1 : Form
     private TextBox _previewWordPress = null!;
     private TextBox _aikoResponseBox = null!;
     private TextBox _aikoPackageInputBox = null!;
+    private Panel _contentHost = null!;
+    private readonly List<Button> _sidebarButtons = [];
+    private string _activeSidebarSection = "Inicio";
     private const string WordPressDraftStatus = "draft";
 
     private sealed record EditorialDiagnostic(
@@ -145,7 +148,12 @@ public partial class Form1 : Form
         shell.Controls.Add(main, 1, 0);
 
         main.Controls.Add(BuildCompleteHeader(), 0, 0);
-        main.Controls.Add(BuildCompleteHome(), 0, 1);
+        _contentHost = new Panel
+        {
+            Dock = DockStyle.Fill,
+            BackColor = BackColor
+        };
+        main.Controls.Add(_contentHost, 0, 1);
 
         _statusLabel = new Label
         {
@@ -156,6 +164,7 @@ public partial class Form1 : Form
             Padding = new Padding(10, 0, 0, 0)
         };
         main.Controls.Add(_statusLabel, 0, 2);
+        ShowSidebarSection("Inicio", false);
     }
 
     private Panel BuildCompleteSidebar()
@@ -670,58 +679,286 @@ public partial class Form1 : Form
 
     private void NavigateSidebar(string section)
     {
-        switch (section)
+        ShowSidebarSection(section, true);
+    }
+
+    private void ShowSidebarSection(string section, bool updateStatus)
+    {
+        _activeSidebarSection = section;
+        UpdateSidebarActiveState();
+
+        Control content = section switch
         {
-            case "Inicio":
-                SetStatus("Inicio: dashboard general visible.");
-                break;
-            case "Notas del Dia":
-                _aikoPackageInputBox.Focus();
-                SetStatus("Notas del Dia: pega o escribe el paquete principal.");
-                break;
-            case "Devlogs":
-                PrepareContent();
-                SetStatus("Devlogs: borrador base generado para revisar.");
-                break;
-            case "Discord":
-                CopyOutput("post_discord.md");
-                break;
-            case "X (Twitter)":
-            case "X":
-                CopyOutput("post_x.md");
-                break;
-            case "TikTok / Shorts":
-                GenerateContentBankIdeas();
-                SetStatus("TikTok / Shorts: ideas generadas en Banco de ideas.");
-                break;
-            case "itch.io":
-                SetStatus("itch.io: preparar copia manual desde los borradores generados.");
-                break;
-            case "Ideas / Content Bank":
-            case "Banco de ideas":
-                GenerateContentBankIdeas();
-                OpenContentBankFolder();
-                break;
-            case "Tareas":
-                SetStatus("Tareas: revisa la checklist Para hacer hoy.");
-                break;
-            case "Calendario":
-                SetStatus("Calendario: vista pendiente, sin automatizaciones.");
-                break;
-            case "Archivos y Material":
-            case "Material":
-                OpenFolder(_dayPath);
-                break;
-            case "Estado del Proyecto":
-                SetStatus("Estado del Proyecto: Caos Entre Reinos activo.");
-                break;
-            case "Ajustes":
-                OpenFolder(Path.Combine(_dataRoot, "Config"));
-                break;
-            default:
-                SetStatus(section + ": seccion pendiente.");
-                break;
+            "Inicio" => BuildCompleteHome(),
+            "Notas del Dia" => BuildNotesSection(),
+            "Ideas / Content Bank" or "Banco de ideas" => BuildContentBankSection(),
+            "Tareas" => BuildTasksSection(),
+            "Archivos y Material" or "Material" => BuildMaterialSection(),
+            "Estado del Proyecto" => BuildProjectStatusSection(),
+            "Ajustes" => BuildSettingsSection(),
+            "Devlogs" => BuildPendingSection("Devlogs", "Esta seccion tendra una vista propia para revisar devlogs. De momento usa Inicio > Nuevo devlog o los resultados generados."),
+            "Discord" => BuildPendingSection("Discord", "Pendiente de panel propio. Puedes copiar el post desde Resultados cuando exista post_discord.md."),
+            "X (Twitter)" or "X" => BuildPendingSection("X (Twitter)", "Pendiente de panel propio. Puedes copiar el post desde Resultados cuando exista post_x.md."),
+            "TikTok / Shorts" => BuildPendingSection("TikTok / Shorts", "Pendiente de panel propio. Usa Ideas / Content Bank para preparar ideas de video."),
+            "itch.io" => BuildPendingSection("itch.io", "Pendiente de panel propio. La app solo prepara contenido manual, no publica automaticamente."),
+            "Calendario" => BuildPendingSection("Calendario", "Vista pendiente. No hay automatizaciones ni conexion externa."),
+            _ => BuildPendingSection(section, "Esta seccion aun no tiene pantalla propia.")
+        };
+
+        _contentHost.SuspendLayout();
+        _contentHost.Controls.Clear();
+        content.Dock = DockStyle.Fill;
+        _contentHost.Controls.Add(content);
+        _contentHost.ResumeLayout();
+
+        if (section is "Inicio" or "Notas del Dia")
+        {
+            LoadNotes();
+            RefreshAssetsList();
+            LoadPreviews();
         }
+
+        if (updateStatus)
+        {
+            SetStatus(section + ": vista abierta.");
+        }
+    }
+
+    private void UpdateSidebarActiveState()
+    {
+        foreach (var button in _sidebarButtons)
+        {
+            var isActive = string.Equals(button.Tag as string, _activeSidebarSection, StringComparison.OrdinalIgnoreCase);
+            button.BackColor = isActive ? Color.FromArgb(55, 45, 110) : Color.FromArgb(16, 21, 40);
+            button.FlatAppearance.BorderColor = isActive ? Color.FromArgb(255, 79, 216) : Color.FromArgb(38, 48, 82);
+            button.ForeColor = isActive ? Color.White : Color.FromArgb(218, 226, 255);
+        }
+    }
+
+    private Control BuildNotesSection()
+    {
+        var container = new TableLayoutPanel
+        {
+            Dock = DockStyle.Fill,
+            ColumnCount = 1,
+            RowCount = 2,
+            BackColor = BackColor
+        };
+        container.RowStyles.Add(new RowStyle(SizeType.Absolute, 250F));
+        container.RowStyles.Add(new RowStyle(SizeType.Percent, 100F));
+
+        container.Controls.Add(BuildPackageInputCard(), 0, 0);
+        container.Controls.Add(BuildPreviewAreaCard(), 0, 1);
+        return container;
+    }
+
+    private Control BuildContentBankSection()
+    {
+        var panel = MakeScrollableSection();
+        AddSectionTitle(panel, "Ideas / Content Bank", "Genera ideas locales para AikoGx-ContentBank. Nada se publica automaticamente.");
+
+        var actions = MakeButtonPanel(new Point(18, 74), new Size(720, 48));
+        actions.Controls.Add(MakeButton("Generar Content Bank", GenerateContentBankIdeas, true));
+        actions.Controls.Add(MakeButton("Abrir carpeta Content Bank", OpenContentBankFolder));
+        actions.Controls.Add(MakeButton("Abrir salida del dia", () => OpenFolder(Path.Combine(_dayPath, "Salida"))));
+        panel.Controls.Add(actions);
+
+        var preview = MakePreviewBox();
+        preview.Location = new Point(18, 140);
+        preview.Size = new Size(760, 420);
+        preview.Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right;
+        preview.Text = ReadContentBankPreview();
+        panel.Controls.Add(preview);
+        return panel;
+    }
+
+    private Control BuildTasksSection()
+    {
+        var panel = MakeScrollableSection();
+        AddSectionTitle(panel, "Tareas", "Checklist simple para ordenar el trabajo de hoy. La primera tarea recomendada esta marcada como prioridad alta.");
+
+        panel.Controls.Add(MakeTaskCheckBox("Pegar o escribir notas reales del dia", "Alta", Color.FromArgb(255, 103, 103), new Point(20, 86)));
+        panel.Controls.Add(MakeTaskCheckBox("Analizar con Aiko y revisar diagnostico", "Alta", Color.FromArgb(255, 103, 103), new Point(20, 124)));
+        panel.Controls.Add(MakeTaskCheckBox("Completar contexto si hay dudas", "Media", Color.FromArgb(255, 209, 102), new Point(20, 162)));
+        panel.Controls.Add(MakeTaskCheckBox("Generar Content Bank o paquete Aiko", "Media", Color.FromArgb(255, 209, 102), new Point(20, 200)));
+        panel.Controls.Add(MakeTaskCheckBox("Crear borrador WordPress solo en draft", "Baja", Color.FromArgb(98, 255, 180), new Point(20, 238)));
+
+        var actions = MakeButtonPanel(new Point(18, 290), new Size(720, 54));
+        actions.Controls.Add(MakeButton("Ir a Notas del Dia", () => ShowSidebarSection("Notas del Dia", true), true));
+        actions.Controls.Add(MakeButton("Analizar con Aiko", AnalyzeWithAiko));
+        actions.Controls.Add(MakeButton("Crear borrador WordPress draft", CreateWordPressDraft));
+        panel.Controls.Add(actions);
+        return panel;
+    }
+
+    private Control BuildMaterialSection()
+    {
+        var panel = MakeScrollableSection();
+        var captures = GetFiles("Capturas");
+        var videos = GetFiles("Videos");
+        AddSectionTitle(panel, "Archivos y Material", $"Capturas: {captures.Length}  |  Videos: {videos.Length}");
+
+        var actions = MakeButtonPanel(new Point(18, 74), new Size(760, 54));
+        actions.Controls.Add(MakeButton("Importar capturas", ImportCaptures, true));
+        actions.Controls.Add(MakeButton("Importar videos", ImportVideos));
+        actions.Controls.Add(MakeButton("Abrir carpeta del dia", () => OpenFolder(_dayPath)));
+        actions.Controls.Add(MakeButton("Abrir Capturas", () => OpenFolder(Path.Combine(_dayPath, "Capturas"))));
+        actions.Controls.Add(MakeButton("Abrir Videos", () => OpenFolder(Path.Combine(_dayPath, "Videos"))));
+        panel.Controls.Add(actions);
+
+        var list = new ListBox
+        {
+            Location = new Point(18, 146),
+            Size = new Size(760, 390),
+            Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right,
+            BackColor = Color.FromArgb(10, 14, 30),
+            ForeColor = Color.FromArgb(244, 247, 255),
+            Font = new Font("Consolas", 9.5F),
+            BorderStyle = BorderStyle.FixedSingle
+        };
+
+        foreach (var file in captures)
+        {
+            list.Items.Add("[captura] " + Path.GetFileName(file));
+        }
+
+        foreach (var file in videos)
+        {
+            list.Items.Add("[video]   " + Path.GetFileName(file));
+        }
+
+        if (list.Items.Count == 0)
+        {
+            list.Items.Add("No hay capturas ni videos para este dia.");
+        }
+
+        panel.Controls.Add(list);
+        return panel;
+    }
+
+    private Control BuildProjectStatusSection()
+    {
+        var panel = MakeScrollableSection();
+        AddSectionTitle(panel, "Estado del Proyecto", "Proyecto activo: Caos Entre Reinos. Herramienta general de AikoGx Studios.");
+
+        panel.Controls.Add(MakeInfoLabel("Estado editorial", "Seguro: la app prepara contenido, no publica automaticamente.", new Point(20, 88)));
+        panel.Controls.Add(MakeInfoLabel("WordPress", "Draft seguro: cualquier envio debe quedar como borrador.", new Point(20, 158)));
+        panel.Controls.Add(MakeInfoLabel("Objetivo semanal", "0/2 videos esta semana. Pendiente de datos reales de historial.", new Point(20, 228)));
+        panel.Controls.Add(MakeInfoLabel("Pendiente", "Esta seccion puede crecer a pantalla completa cuando haya mas datos del proyecto.", new Point(20, 298)));
+        return panel;
+    }
+
+    private Control BuildSettingsSection()
+    {
+        var panel = MakeScrollableSection();
+        AddSectionTitle(panel, "Ajustes", "Configuracion local. No se suben credenciales ni se conecta GitHub desde la app.");
+
+        var actions = MakeButtonPanel(new Point(18, 74), new Size(760, 54));
+        actions.Controls.Add(MakeButton("Abrir Config", () => OpenFolder(Path.Combine(_dataRoot, "Config")), true));
+        actions.Controls.Add(MakeButton("Abrir Plantillas", () => OpenFolder(Path.Combine(_dataRoot, "Plantillas"))));
+        actions.Controls.Add(MakeButton("Abrir Logs", () => OpenFolder(Path.Combine(_dataRoot, "Logs"))));
+        panel.Controls.Add(actions);
+
+        var preview = MakePreviewBox();
+        preview.Location = new Point(18, 146);
+        preview.Size = new Size(760, 360);
+        preview.Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right;
+        var configPath = Path.Combine(_dataRoot, "Config", "config.json");
+        preview.Text = File.Exists(configPath)
+            ? File.ReadAllText(configPath, Encoding.UTF8)
+            : "Config/config.json todavia no existe. La app lo creara al iniciar los datos base.";
+        panel.Controls.Add(preview);
+        return panel;
+    }
+
+    private Control BuildPendingSection(string title, string message)
+    {
+        var panel = MakeScrollableSection();
+        AddSectionTitle(panel, title + " - Pendiente", message);
+        panel.Controls.Add(MakeInfoLabel("Estado", "Pendiente: esta seccion aun no tiene pantalla propia.", new Point(20, 94)));
+        panel.Controls.Add(MakeInfoLabel("Mientras tanto", "Usa Inicio, Notas del Dia, Content Bank o Resultados para preparar contenido manual.", new Point(20, 166)));
+        return panel;
+    }
+
+    private Panel MakeScrollableSection()
+    {
+        return new Panel
+        {
+            Dock = DockStyle.Fill,
+            AutoScroll = true,
+            BackColor = BackColor
+        };
+    }
+
+    private void AddSectionTitle(Control parent, string title, string subtitle)
+    {
+        parent.Controls.Add(new Label
+        {
+            Text = title,
+            AutoSize = true,
+            Font = new Font("Segoe UI", 20F, FontStyle.Bold),
+            ForeColor = Color.FromArgb(244, 247, 255),
+            Location = new Point(18, 18)
+        });
+        parent.Controls.Add(new Label
+        {
+            Text = subtitle,
+            AutoSize = false,
+            Size = new Size(760, 42),
+            Font = new Font("Segoe UI", 10F),
+            ForeColor = Color.FromArgb(174, 184, 217),
+            Location = new Point(20, 54)
+        });
+    }
+
+    private Panel MakeInfoLabel(string title, string text, Point location)
+    {
+        var panel = new Panel
+        {
+            BackColor = Color.FromArgb(18, 24, 42),
+            Location = location,
+            Size = new Size(760, 54),
+            Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right
+        };
+        panel.Controls.Add(new Label
+        {
+            Text = title,
+            AutoSize = true,
+            Font = new Font("Segoe UI", 9F, FontStyle.Bold),
+            ForeColor = Color.FromArgb(88, 243, 255),
+            Location = new Point(12, 8)
+        });
+        panel.Controls.Add(new Label
+        {
+            Text = text,
+            AutoSize = false,
+            Size = new Size(720, 24),
+            Font = new Font("Segoe UI", 9F),
+            ForeColor = Color.FromArgb(244, 247, 255),
+            Location = new Point(12, 28)
+        });
+        return panel;
+    }
+
+    private string ReadContentBankPreview()
+    {
+        var folder = GetContentBankFolder();
+        var weekly = Path.Combine(folder, "esta_semana.md");
+        if (File.Exists(weekly))
+        {
+            return File.ReadAllText(weekly, Encoding.UTF8);
+        }
+
+        if (Directory.Exists(folder))
+        {
+            var files = Directory.GetFiles(folder, "*.md").OrderBy(Path.GetFileName).ToList();
+            if (files.Count > 0)
+            {
+                return string.Join(Environment.NewLine + Environment.NewLine, files.Select(file => "# " + Path.GetFileName(file) + Environment.NewLine + File.ReadAllText(file, Encoding.UTF8)));
+            }
+        }
+
+        return "Todavia no hay ideas generadas. Pulsa Generar Content Bank para crear propuestas locales.";
     }
 
     private void BuildPremiumDashboardUi()
@@ -1831,11 +2068,13 @@ public partial class Form1 : Form
     private Button MakeSidebarButton(string text)
     {
         var button = MakeButton(text, () => NavigateSidebar(text));
+        button.Tag = text;
         button.Width = 198;
         button.Height = 34;
         button.TextAlign = ContentAlignment.MiddleLeft;
         button.BackColor = text == "Inicio" ? Color.FromArgb(55, 45, 110) : Color.FromArgb(16, 21, 40);
         button.FlatAppearance.BorderColor = text == "Inicio" ? Color.FromArgb(255, 79, 216) : Color.FromArgb(38, 48, 82);
+        _sidebarButtons.Add(button);
         return button;
     }
 
@@ -2094,6 +2333,11 @@ public partial class Form1 : Form
 
     private void RefreshAssetsList()
     {
+        if (_assetsList is null || _assetsList.IsDisposed)
+        {
+            return;
+        }
+
         _assetsList.Items.Clear();
 
         var captures = GetFiles("Capturas");
@@ -3417,7 +3661,14 @@ public partial class Form1 : Form
 
     private void UpdateDashboardStatus()
     {
-        if (_notesStateLabel is null || _publicationStateLabel is null)
+        if (!IsLiveLabel(_notesStateLabel)
+            || !IsLiveLabel(_capturesStateLabel)
+            || !IsLiveLabel(_videosStateLabel)
+            || !IsLiveLabel(_diagnosticStateLabel)
+            || !IsLiveLabel(_aikoPackageStateLabel)
+            || !IsLiveLabel(_aikoResponseStateLabel)
+            || !IsLiveLabel(_wordpressStateLabel)
+            || !IsLiveLabel(_publicationStateLabel))
         {
             return;
         }
@@ -3502,6 +3753,11 @@ public partial class Form1 : Form
     {
         label.Text = text;
         label.ForeColor = ready ? Color.FromArgb(98, 255, 180) : Color.FromArgb(255, 209, 102);
+    }
+
+    private static bool IsLiveLabel(Label? label)
+    {
+        return label is not null && !label.IsDisposed;
     }
 
     private static string ToTitle(string value)
@@ -4196,16 +4452,21 @@ public partial class Form1 : Form
 
     private void LoadPreviews()
     {
+        if (_previewDiagnostic is null || _previewDiagnostic.IsDisposed)
+        {
+            return;
+        }
+
         _previewDiagnostic.Text = BuildFriendlyDiagnosticPreview();
-        _previewOrganizedNotes.Text = ReadOutputOrPlaceholder("notas_organizadas.md");
-        _previewWeb.Text = ReadOutputOrPlaceholder("entrada_web.md");
-        _previewDiscord.Text = ReadOutputOrPlaceholder("post_discord.md");
-        _previewX.Text = ReadOutputOrPlaceholder("post_x.md");
-        _previewRedes.Text = "# Discord" + Environment.NewLine + Environment.NewLine
+        if (_previewOrganizedNotes is not null && !_previewOrganizedNotes.IsDisposed) _previewOrganizedNotes.Text = ReadOutputOrPlaceholder("notas_organizadas.md");
+        if (_previewWeb is not null && !_previewWeb.IsDisposed) _previewWeb.Text = ReadOutputOrPlaceholder("entrada_web.md");
+        if (_previewDiscord is not null && !_previewDiscord.IsDisposed) _previewDiscord.Text = ReadOutputOrPlaceholder("post_discord.md");
+        if (_previewX is not null && !_previewX.IsDisposed) _previewX.Text = ReadOutputOrPlaceholder("post_x.md");
+        if (_previewRedes is not null && !_previewRedes.IsDisposed) _previewRedes.Text = "# Discord" + Environment.NewLine + Environment.NewLine
             + ReadOutputOrPlaceholder("post_discord.md") + Environment.NewLine + Environment.NewLine
             + "# X" + Environment.NewLine + Environment.NewLine
             + ReadOutputOrPlaceholder("post_x.md");
-        _previewWordPress.Text = ReadWordPressPreview();
+        if (_previewWordPress is not null && !_previewWordPress.IsDisposed) _previewWordPress.Text = ReadWordPressPreview();
         UpdateDashboardStatus();
     }
 
