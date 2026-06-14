@@ -4,6 +4,10 @@ Este repositorio usa un flujo de trabajo **Aiko -> Codex -> Fagner/Fak**.
 
 Aiko organiza las tareas, define el criterio y prepara instrucciones claras. Codex ejecuta cambios técnicos dentro del repositorio. Fagner/Fak revisa, prueba y aprueba.
 
+## Proyecto
+
+Aiko Web News App es una herramienta local de escritorio para preparar contenido de AikoGx Studios y Caos Entre Reinos: Reborn.
+
 ## Reglas generales para Codex
 
 1. Lee siempre la tarea completa antes de tocar archivos.
@@ -16,6 +20,8 @@ Aiko organiza las tareas, define el criterio y prepara instrucciones claras. Cod
 8. No integres APIs externas, servicios de pago, publicación automática ni automatizaciones peligrosas sin aprobación explícita.
 9. Si modificas código, intenta compilar o indicar cómo probarlo.
 10. Al terminar, crea un resumen en `Codex_Review/`.
+11. Mantén rutas relativas al `.exe` o al directorio de ejecución.
+12. Protege el contenido del usuario y no borres datos generados sin confirmación.
 
 ## Formato del resumen en Codex_Review
 

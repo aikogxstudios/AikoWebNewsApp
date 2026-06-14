@@ -1,0 +1,208 @@
+# Aiko Web News App
+
+Aplicación local de escritorio para Windows creada con **C# .NET 8** y **WinForms**.
+
+Sirve para organizar contenido diario de desarrollo de **Caos Entre Reinos: Reborn** y preparar material para revisar y publicar manualmente en WordPress, Discord, X, TikTok y YouTube Shorts.
+
+La app no publica nada automáticamente, no integra APIs externas y no usa IA dentro de la aplicación. El nuevo **Modo Aiko** genera un paquete/prompt local para copiarlo en ChatGPT/Aiko y guardar después la respuesta final.
+
+## Ejecutar la app
+
+Abre directamente:
+
+`publish\win-x64\AikoWebNewsApp.exe`
+
+La publicación actual es **self-contained win-x64**, así que está pensada para abrirse sin instalar .NET Runtime aparte.
+
+## Flujo recomendado
+
+1. Pulsa **Crear día actual**.
+2. Importa capturas y vídeos.
+3. Escribe notas reales del día.
+4. Pulsa **Generar paquete para Aiko**.
+5. Revisa la etiqueta de recomendación o abre **Ver diagnóstico editorial**.
+6. Pega el paquete en ChatGPT/Aiko.
+7. Copia la respuesta de Aiko.
+8. Pégala en la pestaña **Respuesta de Aiko**.
+9. Pulsa **Guardar respuesta de Aiko**.
+10. Revisa los `.md` finales en `Salida` y `Borradores`.
+
+## Crear un día
+
+La app crea o verifica:
+
+`Dias\YYYY-MM-DD`
+
+Cada día contiene:
+
+- `Capturas`
+- `Videos`
+- `Notas`
+- `Seleccionado`
+- `Salida`
+
+## Guardar notas
+
+Escribe la nota del día en el panel izquierdo y pulsa **Guardar nota rápida**.
+
+La nota se guarda en:
+
+`Dias\YYYY-MM-DD\Notas\nota_rapida.md`
+
+## Importar capturas y vídeos
+
+Las capturas se copian en:
+
+`Dias\YYYY-MM-DD\Capturas`
+
+Los vídeos se copian en:
+
+`Dias\YYYY-MM-DD\Videos`
+
+Si ya existe un archivo con el mismo nombre, se renombra como `captura_1.png`, `captura_2.png`, `video_1.mp4`, etc.
+
+## Preparar contenido
+
+El botón **Preparar contenido** genera un **borrador base** con plantillas locales y crea un diagnóstico editorial.
+
+Archivos generados en `Dias\YYYY-MM-DD\Salida`:
+
+- `entrada_web.md`
+- `post_discord.md`
+- `post_x.md`
+- `ideas_tiktok.md`
+- `ideas_youtube_shorts.md`
+- `resumen_del_dia.md`
+- `imagenes_recomendadas.md`
+- `diagnostico_editorial.md`
+
+También copia esos borradores a:
+
+`Borradores\YYYY-MM-DD`
+
+## Modo Aiko
+
+Pulsa **Generar paquete para Aiko**.
+
+La app lee:
+
+- notas guardadas en `Notas`
+- nombres de capturas en `Capturas`
+- nombres de vídeos en `Videos`
+- archivos `.md` ya generados en `Salida`
+
+Y genera:
+
+`Dias\YYYY-MM-DD\Salida\paquete_para_aiko.md`
+
+También intenta copiar el paquete al portapapeles.
+
+Este paquete está pensado para pegarlo en ChatGPT/Aiko y pedir una versión mejor redactada, usando solo el material real del día.
+
+Antes de pedir contenido largo, el paquete incluye una fase editorial para que Aiko decida si conviene preparar:
+
+- devlog completo
+- avance corto
+- solo redes
+- idea para vídeo
+- nota interna
+- no publicar todavía
+
+La app no fuerza una entrada web larga cuando hay poca información. Si el material del día es pequeño, el paquete pide a Aiko que prepare solo lo que tenga sentido.
+
+## Diagnóstico editorial
+
+La app genera:
+
+`Dias\YYYY-MM-DD\Salida\diagnostico_editorial.md`
+
+Este archivo incluye:
+
+- cantidad de notas detectadas
+- cantidad de capturas detectadas
+- cantidad de vídeos detectados
+- resumen real del material del día
+- nivel de información: bajo, medio o alto
+- tipo de contenido recomendado
+- motivo de la recomendación
+- qué falta para una entrada web fuerte
+- qué contenido sí se puede preparar hoy
+
+Puedes abrirlo con **Ver diagnóstico editorial**.
+
+## Respuesta de Aiko
+
+En la pestaña **Respuesta de Aiko** puedes:
+
+- pegar la respuesta devuelta por ChatGPT/Aiko
+- pulsar **Guardar respuesta de Aiko**
+- copiar el paquete con **Copiar paquete para Aiko**
+- abrir el archivo con **Abrir paquete para Aiko**
+
+La respuesta se guarda en:
+
+`Dias\YYYY-MM-DD\Salida\respuesta_aiko.md`
+
+Y también se copia a:
+
+`Borradores\YYYY-MM-DD\respuesta_aiko.md`
+
+## Vista previa y copiar
+
+La app muestra vista previa de:
+
+- entrada web
+- post Discord
+- post X
+- respuesta de Aiko
+
+También puedes copiar al portapapeles:
+
+- entrada web
+- Discord
+- X
+- paquete para Aiko
+
+## Marcar como publicado
+
+Cuando ya hayas publicado manualmente, pulsa **Marcar como publicado**.
+
+La app copia los `.md` generados a:
+
+`Publicados\YYYY-MM-DD`
+
+Y crea un archivo `publicado.txt` con la fecha y hora.
+
+## Carpetas raíz
+
+La app crea estas carpetas junto al `.exe`:
+
+- `Inbox`
+- `Dias`
+- `Borradores`
+- `Publicados`
+- `Plantillas`
+- `Exportados`
+- `Config`
+- `Logs`
+
+## Limitaciones de esta versión
+
+- No publica automáticamente.
+- No integra WordPress, Discord, X, TikTok ni YouTube.
+- No usa OpenAI API.
+- No integra Ollama.
+- No edita imágenes.
+- No edita vídeos.
+- No separa todavía automáticamente la respuesta de Aiko por secciones.
+- La IA se usa manualmente copiando y pegando el paquete en ChatGPT/Aiko.
+- El diagnóstico editorial usa reglas locales simples, no IA integrada.
+
+## Mejoras futuras posibles
+
+- Separar automáticamente `respuesta_aiko.md` en archivos finales por plataforma.
+- Selector de días anteriores.
+- Editor de plantillas desde la app.
+- Previsualización de imágenes.
+- Historial de publicaciones.
+- Integraciones opcionales, siempre con confirmación manual.

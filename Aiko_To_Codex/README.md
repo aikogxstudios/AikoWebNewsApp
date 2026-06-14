@@ -4,7 +4,15 @@ Carpeta para guardar tareas preparadas por Aiko.
 
 Uso:
 
-- Crear aqui archivos Markdown con instrucciones claras.
+- Crear aquí archivos Markdown con instrucciones claras.
 - Revisar cada archivo antes de trabajar.
-- Mantener tareas pequenas y faciles de comprobar.
-- Al terminar, dejar una nota de revision en `Codex_Review/`.
+- Mantener tareas pequeñas y fáciles de comprobar.
+- Al terminar, dejar una nota de revisión en `Codex_Review/`.
+
+Cada tarea puede incluir:
+
+- objetivo
+- contexto
+- archivos relacionados
+- límites de lo que no debe tocarse
+- resultado esperado
