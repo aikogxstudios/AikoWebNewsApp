@@ -121,7 +121,7 @@ public partial class Form1 : Form
 
         header.Controls.Add(new Label
         {
-            Text = "Organiza avances de Caos Entre Reinos: Reborn y prepara borradores locales para publicar manualmente.",
+            Text = "Organiza avances de AikoGx Studios y prepara borradores locales para revisar y publicar manualmente.",
             AutoSize = true,
             Font = new Font("Segoe UI", 10F),
             ForeColor = Color.FromArgb(207, 196, 255),
@@ -604,6 +604,8 @@ public partial class Form1 : Form
         var diagnosticPath = GetEditorialDiagnosticPath();
         var diagnostic = File.Exists(diagnosticPath) ? File.ReadAllText(diagnosticPath, Encoding.UTF8).Trim() : BuildEditorialDiagnosticMarkdown(CreateEditorialDiagnostic());
         var organizedNotes = ReadOutputFileForPackage("notas_organizadas.md", "Todavía no hay notas organizadas generadas.");
+        var cleanNotesForPackage = BuildCleanNotesForPackage(organizedNotes);
+        var unsafeNotesForPackage = BuildUnsafeNotesForPackage(organizedNotes);
         var titles = ReadOutputFileForPackage("titulos_y_descripciones.md", "Todavía no hay títulos y descripciones generados.");
         var publicationRecommendations = ReadOutputFileForPackage("recomendaciones_publicacion.md", "Todavía no hay recomendaciones de publicación generadas.");
 
@@ -621,6 +623,14 @@ public partial class Form1 : Form
         ## Notas organizadas del desarrollador
 
         {organizedNotes}
+
+        ## Notas limpias para usar
+
+        {cleanNotesForPackage}
+
+        ## Notas que NO deben convertirse en afirmaciones públicas
+
+        {unsafeNotesForPackage}
 
         ## Capturas disponibles
 
@@ -673,6 +683,8 @@ public partial class Form1 : Form
         Evita spoilers fuertes del lore.
         Usa solo la información del material del día.
         Estas notas ya han sido organizadas. Usa solo los avances reales y el material con contexto. No conviertas notas confusas en afirmaciones públicas.
+        Usa solo las notas limpias. Las notas confusas sirven para pedir contexto, no para publicar.
+        Si no hay avances claros, genera solo contenido corto o nota interna.
         Si falta información, haz una versión prudente y pide qué dato falta.
         El contenido debe quedar listo para revisar y publicar manualmente.
         Aprovecha lo más fuerte del material.
@@ -747,6 +759,61 @@ public partial class Form1 : Form
         return File.Exists(path) ? File.ReadAllText(path, Encoding.UTF8).Trim() : fallback;
     }
 
+    private static string BuildCleanNotesForPackage(string organizedNotes)
+    {
+        var advances = ExtractMarkdownSection(organizedNotes, "## Avances reales detectados");
+        var visual = ExtractMarkdownSection(organizedNotes, "## Material visual o destacable");
+        var shortPosts = ExtractMarkdownSection(organizedNotes, "## Posibles posts cortos");
+        var parts = new[] { advances, visual, shortPosts }
+            .Where(part => !string.IsNullOrWhiteSpace(part) && !part.Contains("No hay", StringComparison.OrdinalIgnoreCase) && !part.Contains("No se detectaron", StringComparison.OrdinalIgnoreCase))
+            .ToList();
+
+        return parts.Count == 0 ? "- No hay notas limpias suficientes para publicar sin pedir contexto." : string.Join(Environment.NewLine, parts);
+    }
+
+    private static string BuildUnsafeNotesForPackage(string organizedNotes)
+    {
+        var bugs = ExtractMarkdownSection(organizedNotes, "## Bugs, pruebas o problemas");
+        var future = ExtractMarkdownSection(organizedNotes, "## Ideas futuras o pendientes");
+        var unclear = ExtractMarkdownSection(organizedNotes, "## Notas confusas o con poco contexto");
+        var parts = new[] { bugs, future, unclear }
+            .Where(part => !string.IsNullOrWhiteSpace(part) && !part.Contains("No hay", StringComparison.OrdinalIgnoreCase) && !part.Contains("No se detectaron", StringComparison.OrdinalIgnoreCase))
+            .ToList();
+
+        return parts.Count == 0 ? "- No se detectaron notas problemáticas claras." : string.Join(Environment.NewLine, parts);
+    }
+
+    private static string ExtractMarkdownSection(string markdown, string heading)
+    {
+        if (string.IsNullOrWhiteSpace(markdown))
+        {
+            return string.Empty;
+        }
+
+        var lines = markdown.Split(["\r\n", "\n"], StringSplitOptions.None);
+        var start = Array.FindIndex(lines, line => line.Trim().Equals(heading, StringComparison.OrdinalIgnoreCase));
+        if (start < 0)
+        {
+            return string.Empty;
+        }
+
+        var builder = new StringBuilder();
+        for (var i = start + 1; i < lines.Length; i++)
+        {
+            if (lines[i].StartsWith("## ", StringComparison.Ordinal))
+            {
+                break;
+            }
+
+            if (!string.IsNullOrWhiteSpace(lines[i]))
+            {
+                builder.AppendLine(lines[i]);
+            }
+        }
+
+        return builder.ToString().Trim();
+    }
+
     private void OrganizeDeveloperNotes()
     {
         EnsureDay(_currentDay);
@@ -769,6 +836,7 @@ public partial class Form1 : Form
 
     private string BuildOrganizedNotesMarkdown(List<string> noteContents, List<string> captures, List<string> videos, EditorialDiagnostic diagnostic)
     {
+        var rawNotes = string.Join(" ", noteContents);
         var fragments = SplitDeveloperNoteFragments(noteContents);
         var advances = new List<string>();
         var visual = new List<string>();
@@ -780,6 +848,11 @@ public partial class Form1 : Form
         foreach (var fragment in fragments)
         {
             var normalized = fragment.ToLowerInvariant();
+            if (IsCompactMixedDeveloperNote(normalized))
+            {
+                continue;
+            }
+
             var hasContext = HasEnoughContext(fragment);
             var isBug = ContainsAny(normalized, ["bug", "error", "fallo", "problema", "raro", "rara", "rompe", "crash", "no funciona", "prueba", "test"]);
             var isFuture = ContainsAny(normalized, ["pendiente", "futuro", "idea", "roadmap", "meter", "añadir", "agregar", "no se si", "no sé si", "quizá", "quiza", "luego"]);
@@ -816,6 +889,8 @@ public partial class Form1 : Form
                 shortPosts.Add(CleanFragment(fragment));
             }
         }
+
+        AddStructuredHintsFromCompactNotes(rawNotes, advances, visual, bugs, future, unclear, shortPosts);
 
         foreach (var capture in captures)
         {
@@ -882,10 +957,72 @@ public partial class Form1 : Form
         return fragments;
     }
 
+    private static void AddStructuredHintsFromCompactNotes(
+        string rawNotes,
+        List<string> advances,
+        List<string> visual,
+        List<string> bugs,
+        List<string> future,
+        List<string> unclear,
+        List<string> shortPosts)
+    {
+        var normalized = rawNotes.ToLowerInvariant();
+
+        if (ContainsAny(normalized, ["evento cartas", "eventos cartas", "evento de cartas", "eventos de cartas", "cartas"]))
+        {
+            advances.Add("Posible evento relacionado con cartas.");
+            shortPosts.Add("Comentar que se están probando ideas para eventos de cartas.");
+        }
+
+        if (ContainsAny(normalized, ["limon gigante", "limón gigante"]))
+        {
+            advances.Add("Elemento destacable: limón gigante disponible.");
+            visual.Add("Limón gigante.");
+            shortPosts.Add("Mostrar el limón gigante como curiosidad visual si hay captura.");
+        }
+
+        if (ContainsAny(normalized, ["video pendiente", "vídeo pendiente"]))
+        {
+            visual.Add("Vídeo pendiente.");
+            future.Add("Vídeo pendiente. No presentarlo como material ya listo.");
+        }
+
+        if (ContainsAny(normalized, ["dia nubes", "día nubes", "nubes"]))
+        {
+            visual.Add("Nubes, si existe captura o contexto visual.");
+            unclear.Add("\"dia nubes\" necesita más contexto.");
+        }
+
+        if (ContainsAny(normalized, ["ui rara"]))
+        {
+            bugs.Add("UI rara. Requiere más contexto antes de publicarlo.");
+            unclear.Add("\"ui rara\" necesita explicar qué pasa.");
+        }
+
+        if (ContainsAny(normalized, ["no se si meterlo aun", "no sé si meterlo aún", "no se si meterlo aún", "no sé si meterlo aun"]))
+        {
+            future.Add("No se si meterlo aun. No presentarlo como confirmado.");
+            unclear.Add("\"no se si meterlo aun\" indica una duda de diseño.");
+        }
+    }
+
     private static bool HasEnoughContext(string fragment)
     {
         var words = fragment.Split([' ', '\t'], StringSplitOptions.RemoveEmptyEntries).Length;
         return words >= 5;
+    }
+
+    private static bool IsCompactMixedDeveloperNote(string normalized)
+    {
+        var signals = 0;
+        if (ContainsAny(normalized, ["cartas", "evento"])) signals++;
+        if (ContainsAny(normalized, ["limon", "limón", "gigante", "nubes"])) signals++;
+        if (ContainsAny(normalized, ["ui rara", "bug", "problema"])) signals++;
+        if (ContainsAny(normalized, ["pendiente", "no se si", "no sé si"])) signals++;
+        if (ContainsAny(normalized, ["video", "vídeo"])) signals++;
+
+        var words = normalized.Split([' ', '\t'], StringSplitOptions.RemoveEmptyEntries).Length;
+        return signals >= 3 && words >= 8;
     }
 
     private static string CleanFragment(string fragment)
@@ -903,7 +1040,7 @@ public partial class Form1 : Form
     {
         if (advances.Count > 0)
         {
-            return "El día contiene avances potencialmente publicables, pero conviene apoyarlos con contexto antes de convertirlos en contenido público.";
+            return "Hay una nota rápida con posibles pruebas de cartas, un elemento visual llamativo y dudas de diseño que necesitan contexto antes de publicarse.";
         }
 
         if (visual.Count > 0)
@@ -1056,6 +1193,20 @@ public partial class Form1 : Form
             missing = "Para reforzarlo, conviene añadir capturas principales, detalles concretos de cambios y estado de pruebas.";
             possible = "Entrada web completa, Discord, X, ideas de vídeo y recomendación de imagen principal.";
         }
+        else if (level == "bajo" && mediaCount == 0 && hasVisualHook)
+        {
+            type = "solo redes";
+            reason = "Hay una rareza o gancho visual, pero falta captura, vídeo y contexto para sostener una publicación web.";
+            missing = "Captura del elemento llamativo, explicación del contexto y detalle de qué se probó realmente.";
+            possible = "Post corto para Discord/X o nota interna para pedir más contexto.";
+        }
+        else if (level == "bajo" && mediaCount == 0)
+        {
+            type = "nota interna";
+            reason = "La información es baja y no hay material visual de apoyo.";
+            missing = "Más contexto, una captura o vídeo y una explicación clara del avance.";
+            possible = "Nota interna o lista de material pendiente.";
+        }
         else if (mediaCount >= 1 && (hasVisualHook || wordCount < 45))
         {
             type = "idea para vídeo";
@@ -1142,13 +1293,13 @@ public partial class Form1 : Form
 
     private static string BuildTitlesAndDescriptionsMarkdown(EditorialDiagnostic diagnostic)
     {
-        var titleBase = diagnostic.Summary.Length > 80 ? diagnostic.Summary[..80].Trim() + "..." : diagnostic.Summary;
+        var titleBase = BuildCleanTitleSeed(diagnostic);
         var chosenTitle = diagnostic.RecommendedType switch
         {
-            "devlog completo" => "Devlog de Caos Entre Reinos: Reborn - " + ShortTitle(titleBase),
-            "mini devlog" => "Mini devlog: " + ShortTitle(titleBase),
-            "solo redes" => "Pequeño avance del día: " + ShortTitle(titleBase),
-            "idea para vídeo" => "Idea visual del día: " + ShortTitle(titleBase),
+            "devlog completo" => "Devlog AikoGx: " + titleBase,
+            "mini devlog" => "Mini update AikoGx: " + titleBase,
+            "solo redes" => titleBase,
+            "idea para vídeo" => "Idea visual AikoGx: " + titleBase,
             "nota interna" => "Nota interna de desarrollo",
             _ => "Material pendiente de completar"
         };
@@ -1188,6 +1339,38 @@ public partial class Form1 : Form
 
         Se eligió para reflejar el tipo recomendado ({diagnostic.RecommendedType}) sin inflar el alcance del material disponible.
         """.Trim() + Environment.NewLine;
+    }
+
+    private static string BuildCleanTitleSeed(EditorialDiagnostic diagnostic)
+    {
+        var keywords = diagnostic.Keywords.Select(RemoveAccentsFallback).ToList();
+
+        if (keywords.Any(k => k.Contains("cartas")) && keywords.Any(k => k.Contains("limon")))
+        {
+            return "Pruebas internas con cartas y un limón gigante";
+        }
+
+        if (keywords.Any(k => k.Contains("limon")))
+        {
+            return "Un pequeño experimento visual para AikoGx Studios";
+        }
+
+        if (keywords.Any(k => k.Contains("cartas")) && keywords.Any(k => k.Contains("nubes")))
+        {
+            return "Notas rápidas: cartas, nubes y una idea pendiente";
+        }
+
+        if (keywords.Any(k => k.Contains("cartas")))
+        {
+            return "Pruebas internas con eventos de cartas";
+        }
+
+        if (diagnostic.InformationLevel == "bajo")
+        {
+            return "Notas rápidas de desarrollo AikoGx";
+        }
+
+        return ShortTitle(diagnostic.Summary);
     }
 
     private static string BuildPublicationRecommendationsMarkdown(EditorialDiagnostic diagnostic)

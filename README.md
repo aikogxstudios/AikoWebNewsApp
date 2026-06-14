@@ -2,7 +2,7 @@
 
 Aplicación local de escritorio para Windows creada con **C# .NET 8** y **WinForms**.
 
-Sirve para organizar contenido diario de desarrollo de **Caos Entre Reinos: Reborn** y preparar material para revisar y publicar manualmente en WordPress, Discord, X, TikTok y YouTube Shorts.
+Sirve para organizar contenido diario de desarrollo de **AikoGx Studios** y preparar material para revisar y publicar manualmente en WordPress, Discord, X, TikTok y YouTube Shorts. El proyecto por defecto puede ser **Caos Entre Reinos: Reborn**, pero la herramienta no está limitada a un solo juego.
 
 La app no publica nada automáticamente, no integra APIs externas y no usa IA dentro de la aplicación. El nuevo **Modo Aiko** genera un paquete/prompt local para copiarlo en ChatGPT/Aiko y guardar después la respuesta final.
 
