@@ -178,6 +178,68 @@ La app copia los `.md` generados a:
 
 Y crea un archivo `publicado.txt` con la fecha y hora.
 
+## WordPress borradores
+
+La app puede preparar una entrada en WordPress, pero siempre en estado **draft**. Nunca usa `publish`, no programa publicaciones y no publica automáticamente.
+
+Botones disponibles:
+
+- **Crear borrador WordPress**: intenta crear un borrador vía WordPress REST API.
+- **Abrir borrador manual**: abre el archivo HTML local preparado para copiar y pegar.
+
+Contenido usado por prioridad:
+
+1. `Dias\YYYY-MM-DD\Salida\respuesta_aiko.md`
+2. `Dias\YYYY-MM-DD\Salida\entrada_web.md`
+
+La app intenta leer título, extracto, categoría y tags desde:
+
+- `titulos_y_descripciones.md`
+- `recomendaciones_publicacion.md`
+
+### Configuración local
+
+Copia:
+
+`Config\wordpress_config.example.json`
+
+Como:
+
+`Config\wordpress_config.json`
+
+Y rellena tus datos localmente:
+
+```json
+{
+  "siteUrl": "https://aikogx.es",
+  "username": "",
+  "applicationPassword": "",
+  "defaultCategoryId": null,
+  "defaultStatus": "draft"
+}
+```
+
+`Config\wordpress_config.json` está ignorado por Git y no debe subirse al repositorio.
+
+### Application Password
+
+En WordPress:
+
+1. Entra en tu usuario.
+2. Abre Perfil.
+3. Busca **Application Passwords**.
+4. Crea una nueva contraseña para Aiko Web News App.
+5. Copia esa contraseña en `applicationPassword`.
+
+### Modo manual
+
+Si falta configuración, está incompleta o WordPress devuelve un error, la app no pierde contenido y crea:
+
+- `wordpress_borrador_manual.md`
+- `wordpress_borrador_manual.html`
+
+Estos archivos contienen título, extracto, categoría sugerida, tags y contenido para copiar manualmente en WordPress.
+
 ## Carpetas raíz
 
 La app crea estas carpetas junto al `.exe`:
@@ -194,7 +256,7 @@ La app crea estas carpetas junto al `.exe`:
 ## Limitaciones de esta versión
 
 - No publica automáticamente.
-- No integra WordPress, Discord, X, TikTok ni YouTube.
+- No publica automáticamente en WordPress, Discord, X, TikTok ni YouTube.
 - No usa OpenAI API.
 - No integra Ollama.
 - No edita imágenes.

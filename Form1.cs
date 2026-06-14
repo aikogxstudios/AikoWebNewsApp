@@ -1,4 +1,5 @@
 using System.Diagnostics;
+using System.Net.Http.Headers;
 using System.Text;
 using System.Text.Json;
 
@@ -17,6 +18,7 @@ public partial class Form1 : Form
     private TextBox _previewDiscord = null!;
     private TextBox _previewX = null!;
     private TextBox _aikoResponseBox = null!;
+    private const string WordPressDraftStatus = "draft";
 
     private sealed record EditorialDiagnostic(
         int NoteCount,
@@ -30,6 +32,21 @@ public partial class Form1 : Form
         string Reason,
         string MissingForStrongWebEntry,
         string PossibleContentToday);
+
+    private sealed record WordPressConfig(
+        string? SiteUrl,
+        string? Username,
+        string? ApplicationPassword,
+        int? DefaultCategoryId,
+        string? DefaultStatus);
+
+    private sealed record WordPressDraftContent(
+        string Title,
+        string ContentMarkdown,
+        string ContentHtml,
+        string Excerpt,
+        string Category,
+        string Tags);
 
     private static readonly string[] RootFolders =
     [
@@ -231,6 +248,8 @@ public partial class Form1 : Form
         copyButtons.Controls.Add(MakeButton("Copiar Discord", () => CopyOutput("post_discord.md")));
         copyButtons.Controls.Add(MakeButton("Copiar X", () => CopyOutput("post_x.md")));
         copyButtons.Controls.Add(MakeButton("Ver diagnóstico editorial", OpenEditorialDiagnostic));
+        copyButtons.Controls.Add(MakeButton("Crear borrador WordPress", CreateWordPressDraft));
+        copyButtons.Controls.Add(MakeButton("Abrir borrador manual", OpenManualWordPressDraft));
         copyButtons.Controls.Add(MakeButton("Marcar como publicado", MarkAsPublished));
         right.Controls.Add(copyButtons, 0, 4);
 
@@ -1256,6 +1275,440 @@ public partial class Form1 : Form
         File.WriteAllText(Path.Combine(output, "respuesta_aiko.md"), response + Environment.NewLine, Encoding.UTF8);
         File.WriteAllText(Path.Combine(drafts, "respuesta_aiko.md"), response + Environment.NewLine, Encoding.UTF8);
         SetStatus("Respuesta de Aiko guardada correctamente.");
+    }
+
+    private void CreateWordPressDraft()
+    {
+        CreateWordPressDraftCore(true);
+    }
+
+    private void CreateWordPressDraftCore(bool showMessages)
+    {
+        EnsureDay(_currentDay);
+        var output = Path.Combine(_dayPath, "Salida");
+        Directory.CreateDirectory(output);
+
+        if (!TryBuildWordPressDraftContent(out var draftContent, out var message))
+        {
+            WriteManualWordPressDraft(output, draftContent, message);
+            SetStatus(message);
+            ShowWordPressMessage(showMessages, message + Environment.NewLine + "Se ha creado un borrador manual para copiar en WordPress.", MessageBoxIcon.Information);
+            return;
+        }
+
+        var configPath = GetWordPressConfigPath();
+        if (!File.Exists(configPath))
+        {
+            WriteManualWordPressDraft(output, draftContent, "Falta Config/wordpress_config.json.");
+            SetStatus("Falta configuración WordPress. Borrador manual creado.");
+            ShowWordPressMessage(showMessages, "Falta Config/wordpress_config.json. Se ha creado un borrador manual para copiar en WordPress.", MessageBoxIcon.Information);
+            return;
+        }
+
+        WordPressConfig? config;
+        try
+        {
+            config = JsonSerializer.Deserialize<WordPressConfig>(File.ReadAllText(configPath, Encoding.UTF8), new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
+        }
+        catch (Exception ex)
+        {
+            Log(ex.ToString());
+            WriteManualWordPressDraft(output, draftContent, "No se pudo leer la configuración WordPress.");
+            SetStatus("Config WordPress inválida. Borrador manual creado.");
+            return;
+        }
+
+        if (!IsWordPressConfigComplete(config, out var configError))
+        {
+            WriteManualWordPressDraft(output, draftContent, configError);
+            SetStatus("Configuración WordPress incompleta. Borrador manual creado.");
+            ShowWordPressMessage(showMessages, configError + Environment.NewLine + "Se ha creado un borrador manual para copiar en WordPress.", MessageBoxIcon.Warning);
+            return;
+        }
+
+        try
+        {
+            var result = SendWordPressDraft(config!, draftContent);
+            File.WriteAllText(Path.Combine(output, "wordpress_borrador_resultado.md"), result, Encoding.UTF8);
+            SetStatus("Borrador WordPress creado en estado draft. Revisa manualmente antes de publicar.");
+            ShowWordPressMessage(showMessages, "Borrador WordPress creado en estado draft. Revisa manualmente antes de publicar.", MessageBoxIcon.Information);
+        }
+        catch (Exception ex)
+        {
+            Log(ex.ToString());
+            WriteManualWordPressDraft(output, draftContent, "Error al crear borrador por API: " + ex.Message);
+            SetStatus("Error WordPress. Borrador manual creado.");
+            ShowWordPressMessage(showMessages, "WordPress devolvió un error o no se pudo conectar. Se ha creado un borrador manual y no se ha marcado nada como subido.", MessageBoxIcon.Warning);
+        }
+    }
+
+    private void ShowWordPressMessage(bool showMessages, string message, MessageBoxIcon icon)
+    {
+        if (showMessages)
+        {
+            MessageBox.Show(this, message, "Aiko Web News App", MessageBoxButtons.OK, icon);
+        }
+    }
+
+    private bool TryBuildWordPressDraftContent(out WordPressDraftContent draftContent, out string message)
+    {
+        var output = Path.Combine(_dayPath, "Salida");
+        var responsePath = Path.Combine(output, "respuesta_aiko.md");
+        var basePath = Path.Combine(output, "entrada_web.md");
+        var sourcePath = File.Exists(responsePath) ? responsePath : File.Exists(basePath) ? basePath : string.Empty;
+
+        if (string.IsNullOrEmpty(sourcePath))
+        {
+            draftContent = new WordPressDraftContent("Borrador pendiente", string.Empty, string.Empty, string.Empty, string.Empty, string.Empty);
+            message = "No hay respuesta_aiko.md ni entrada_web.md suficiente para crear un borrador.";
+            return false;
+        }
+
+        var markdown = File.ReadAllText(sourcePath, Encoding.UTF8).Trim();
+        if (string.IsNullOrWhiteSpace(markdown))
+        {
+            draftContent = new WordPressDraftContent("Borrador pendiente", string.Empty, string.Empty, string.Empty, string.Empty, string.Empty);
+            message = "El contenido seleccionado está vacío.";
+            return false;
+        }
+
+        var titlesPath = Path.Combine(output, "titulos_y_descripciones.md");
+        var recommendationsPath = Path.Combine(output, "recomendaciones_publicacion.md");
+        var titleInfo = File.Exists(titlesPath) ? File.ReadAllText(titlesPath, Encoding.UTF8) : string.Empty;
+        var recommendations = File.Exists(recommendationsPath) ? File.ReadAllText(recommendationsPath, Encoding.UTF8) : string.Empty;
+
+        var title = ExtractSectionValue(titleInfo, "## Título elegido");
+        if (string.IsNullOrWhiteSpace(title))
+        {
+            title = ExtractFirstMarkdownHeading(markdown);
+        }
+        if (string.IsNullOrWhiteSpace(title))
+        {
+            title = "Borrador AikoGx Studios - " + _currentDay;
+        }
+
+        var excerpt = ExtractSectionValue(titleInfo, "## Extracto WordPress si aplica");
+        if (string.IsNullOrWhiteSpace(excerpt) || excerpt.StartsWith("No recomendado", StringComparison.OrdinalIgnoreCase))
+        {
+            excerpt = ExtractSectionValue(titleInfo, "## Descripción corta");
+        }
+
+        var category = ExtractSectionValue(recommendations, "## Categoría WordPress si aplica");
+        var tags = ExtractSectionValue(recommendations, "## Tags WordPress si aplica");
+
+        draftContent = new WordPressDraftContent(
+            title.Trim(),
+            markdown,
+            ConvertMarkdownToBasicHtml(markdown),
+            excerpt.Trim(),
+            category.Trim(),
+            tags.Trim());
+        message = "Contenido preparado para WordPress.";
+        return true;
+    }
+
+    private string SendWordPressDraft(WordPressConfig config, WordPressDraftContent draftContent)
+    {
+        var endpoint = new Uri(new Uri(config.SiteUrl!.TrimEnd('/') + "/"), "wp-json/wp/v2/posts");
+        using var client = new HttpClient();
+        var auth = Convert.ToBase64String(Encoding.UTF8.GetBytes(config.Username + ":" + config.ApplicationPassword));
+        client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Basic", auth);
+
+        var payload = new Dictionary<string, object?>
+        {
+            ["title"] = draftContent.Title,
+            ["content"] = draftContent.ContentHtml,
+            ["status"] = WordPressDraftStatus,
+            ["excerpt"] = draftContent.Excerpt
+        };
+
+        if (config.DefaultCategoryId is int categoryId)
+        {
+            payload["categories"] = new[] { categoryId };
+        }
+
+        var json = JsonSerializer.Serialize(payload);
+        using var content = new StringContent(json, Encoding.UTF8, "application/json");
+        using var response = client.PostAsync(endpoint, content).GetAwaiter().GetResult();
+        var responseBody = response.Content.ReadAsStringAsync().GetAwaiter().GetResult();
+
+        if (!response.IsSuccessStatusCode)
+        {
+            throw new InvalidOperationException($"HTTP {(int)response.StatusCode}: {responseBody}");
+        }
+
+        using var document = JsonDocument.Parse(responseBody);
+        var root = document.RootElement;
+        var id = root.TryGetProperty("id", out var idProperty) ? idProperty.ToString() : "no devuelto";
+        var link = root.TryGetProperty("link", out var linkProperty) ? linkProperty.GetString() ?? "no devuelto" : "no devuelto";
+        var editLink = TryGetWordPressEditLink(root);
+
+        return $"""
+        # Resultado borrador WordPress
+
+        - Fecha: {DateTime.Now:yyyy-MM-dd HH:mm:ss}
+        - Título enviado: {draftContent.Title}
+        - Estado usado: {WordPressDraftStatus}
+        - ID del borrador: {id}
+        - Enlace de edición: {editLink}
+        - Enlace de vista previa: {link}
+
+        Aviso: revisar manualmente en WordPress antes de publicar. La app no ha publicado automáticamente.
+        """.Trim() + Environment.NewLine;
+    }
+
+    private static string TryGetWordPressEditLink(JsonElement root)
+    {
+        if (!root.TryGetProperty("_links", out var links) || !links.TryGetProperty("edit", out var editArray) || editArray.ValueKind != JsonValueKind.Array)
+        {
+            return "no devuelto";
+        }
+
+        foreach (var item in editArray.EnumerateArray())
+        {
+            if (item.TryGetProperty("href", out var href))
+            {
+                return href.GetString() ?? "no devuelto";
+            }
+        }
+
+        return "no devuelto";
+    }
+
+    private void WriteManualWordPressDraft(string output, WordPressDraftContent draftContent, string reason)
+    {
+        Directory.CreateDirectory(output);
+
+        var markdown = $"""
+        # Borrador manual WordPress
+
+        ## Motivo
+
+        {reason}
+
+        ## Título
+
+        {draftContent.Title}
+
+        ## Extracto
+
+        {draftContent.Excerpt}
+
+        ## Categoría sugerida
+
+        {draftContent.Category}
+
+        ## Tags sugeridos
+
+        {draftContent.Tags}
+
+        ## Contenido
+
+        {draftContent.ContentMarkdown}
+
+        ## Instrucciones
+
+        1. Abrir WordPress manualmente.
+        2. Crear una nueva entrada.
+        3. Pegar el título, extracto y contenido.
+        4. Dejar el estado como borrador.
+        5. Revisar todo antes de publicar manualmente.
+        """.Trim() + Environment.NewLine;
+
+        var html = $"""
+        <!doctype html>
+        <html lang="es">
+        <head>
+          <meta charset="utf-8">
+          <title>{EscapeHtml(draftContent.Title)}</title>
+        </head>
+        <body>
+          <h1>{EscapeHtml(draftContent.Title)}</h1>
+          <p><strong>Motivo:</strong> {EscapeHtml(reason)}</p>
+          <p><strong>Extracto:</strong> {EscapeHtml(draftContent.Excerpt)}</p>
+          <p><strong>Categoría sugerida:</strong> {EscapeHtml(draftContent.Category)}</p>
+          <p><strong>Tags sugeridos:</strong> {EscapeHtml(draftContent.Tags)}</p>
+          <hr>
+          {draftContent.ContentHtml}
+        </body>
+        </html>
+        """.Trim() + Environment.NewLine;
+
+        File.WriteAllText(Path.Combine(output, "wordpress_borrador_manual.md"), markdown, Encoding.UTF8);
+        File.WriteAllText(Path.Combine(output, "wordpress_borrador_manual.html"), html, Encoding.UTF8);
+    }
+
+    private void OpenManualWordPressDraft()
+    {
+        EnsureDay(_currentDay);
+        var output = Path.Combine(_dayPath, "Salida");
+        Directory.CreateDirectory(output);
+        var path = Path.Combine(output, "wordpress_borrador_manual.html");
+
+        if (!File.Exists(path))
+        {
+            if (TryBuildWordPressDraftContent(out var draftContent, out var message))
+            {
+                WriteManualWordPressDraft(output, draftContent, "Borrador manual generado a petición del usuario.");
+            }
+            else
+            {
+                WriteManualWordPressDraft(output, draftContent, message);
+            }
+        }
+
+        Process.Start(new ProcessStartInfo
+        {
+            FileName = path,
+            UseShellExecute = true
+        });
+    }
+
+    private static bool IsWordPressConfigComplete(WordPressConfig? config, out string error)
+    {
+        if (config is null)
+        {
+            error = "La configuración WordPress está vacía o no se pudo interpretar.";
+            return false;
+        }
+
+        if (string.IsNullOrWhiteSpace(config.SiteUrl) || string.IsNullOrWhiteSpace(config.Username) || string.IsNullOrWhiteSpace(config.ApplicationPassword))
+        {
+            error = "Configuración WordPress incompleta. Revisa siteUrl, username y applicationPassword.";
+            return false;
+        }
+
+        if (!Uri.TryCreate(config.SiteUrl, UriKind.Absolute, out var uri) || uri.Scheme is not ("http" or "https"))
+        {
+            error = "siteUrl no es una URL válida.";
+            return false;
+        }
+
+        if (!string.IsNullOrWhiteSpace(config.DefaultStatus) && !string.Equals(config.DefaultStatus, WordPressDraftStatus, StringComparison.OrdinalIgnoreCase))
+        {
+            error = "defaultStatus debe ser draft. La app fuerza siempre draft por seguridad.";
+            return false;
+        }
+
+        error = string.Empty;
+        return true;
+    }
+
+    private string GetWordPressConfigPath()
+    {
+        return Path.Combine(_dataRoot, "Config", "wordpress_config.json");
+    }
+
+    private static string ExtractFirstMarkdownHeading(string markdown)
+    {
+        return markdown
+            .Split(["\r\n", "\n"], StringSplitOptions.RemoveEmptyEntries)
+            .Select(line => line.Trim())
+            .FirstOrDefault(line => line.StartsWith("# "))
+            ?.TrimStart('#', ' ')
+            .Trim() ?? string.Empty;
+    }
+
+    private static string ExtractSectionValue(string markdown, string heading)
+    {
+        if (string.IsNullOrWhiteSpace(markdown))
+        {
+            return string.Empty;
+        }
+
+        var lines = markdown.Split(["\r\n", "\n"], StringSplitOptions.None);
+        var start = Array.FindIndex(lines, line => line.Trim().Equals(heading, StringComparison.OrdinalIgnoreCase));
+        if (start < 0)
+        {
+            return string.Empty;
+        }
+
+        var builder = new StringBuilder();
+        for (var i = start + 1; i < lines.Length; i++)
+        {
+            var line = lines[i];
+            if (line.StartsWith("## ", StringComparison.Ordinal))
+            {
+                break;
+            }
+
+            if (!string.IsNullOrWhiteSpace(line))
+            {
+                builder.AppendLine(line.Trim());
+            }
+        }
+
+        return builder.ToString().Trim();
+    }
+
+    private static string ConvertMarkdownToBasicHtml(string markdown)
+    {
+        var builder = new StringBuilder();
+        var inList = false;
+
+        foreach (var rawLine in markdown.Split(["\r\n", "\n"], StringSplitOptions.None))
+        {
+            var line = rawLine.Trim();
+            if (string.IsNullOrWhiteSpace(line))
+            {
+                if (inList)
+                {
+                    builder.AppendLine("</ul>");
+                    inList = false;
+                }
+                continue;
+            }
+
+            if (line.StartsWith("- ", StringComparison.Ordinal))
+            {
+                if (!inList)
+                {
+                    builder.AppendLine("<ul>");
+                    inList = true;
+                }
+                builder.AppendLine("<li>" + EscapeHtml(line[2..]) + "</li>");
+                continue;
+            }
+
+            if (inList)
+            {
+                builder.AppendLine("</ul>");
+                inList = false;
+            }
+
+            if (line.StartsWith("### ", StringComparison.Ordinal))
+            {
+                builder.AppendLine("<h3>" + EscapeHtml(line[4..]) + "</h3>");
+            }
+            else if (line.StartsWith("## ", StringComparison.Ordinal))
+            {
+                builder.AppendLine("<h2>" + EscapeHtml(line[3..]) + "</h2>");
+            }
+            else if (line.StartsWith("# ", StringComparison.Ordinal))
+            {
+                builder.AppendLine("<h1>" + EscapeHtml(line[2..]) + "</h1>");
+            }
+            else
+            {
+                builder.AppendLine("<p>" + EscapeHtml(line) + "</p>");
+            }
+        }
+
+        if (inList)
+        {
+            builder.AppendLine("</ul>");
+        }
+
+        return builder.ToString().Trim();
+    }
+
+    private static string EscapeHtml(string value)
+    {
+        return value
+            .Replace("&", "&amp;")
+            .Replace("<", "&lt;")
+            .Replace(">", "&gt;")
+            .Replace("\"", "&quot;");
     }
 
     private string GetAikoPackagePath()
