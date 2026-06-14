@@ -29,6 +29,18 @@ La publicación actual es **self-contained win-x64**, así que está pensada par
 11. Pulsa **Guardar respuesta de Aiko**.
 12. Revisa los `.md` finales en `Salida` y `Borradores`.
 
+## Dashboard editorial
+
+La pantalla principal funciona como un centro de mando interno de AikoGx Studios:
+
+- notas del dia como materia prima
+- cards de estado para notas, capturas, videos, diagnostico, paquete Aiko, respuesta y WordPress
+- flujo principal por pasos
+- estado de publicacion visible
+- vistas previas para diagnostico, notas organizadas, Aiko, web, redes, WordPress y material
+
+El boton **Preparar contenido base** queda como herramienta secundaria. El flujo principal recomendado es organizar notas, analizar material y generar el paquete para Aiko antes de preparar borradores finales.
+
 ## Crear un día
 
 La app crea o verifica:

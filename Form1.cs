@@ -14,9 +14,21 @@ public partial class Form1 : Form
     private ListBox _assetsList = null!;
     private Label _statusLabel = null!;
     private Label _recommendationLabel = null!;
+    private Label _notesStateLabel = null!;
+    private Label _capturesStateLabel = null!;
+    private Label _videosStateLabel = null!;
+    private Label _diagnosticStateLabel = null!;
+    private Label _aikoPackageStateLabel = null!;
+    private Label _aikoResponseStateLabel = null!;
+    private Label _wordpressStateLabel = null!;
+    private Label _publicationStateLabel = null!;
     private TextBox _previewWeb = null!;
     private TextBox _previewDiscord = null!;
     private TextBox _previewX = null!;
+    private TextBox _previewDiagnostic = null!;
+    private TextBox _previewOrganizedNotes = null!;
+    private TextBox _previewRedes = null!;
+    private TextBox _previewWordPress = null!;
     private TextBox _aikoResponseBox = null!;
     private const string WordPressDraftStatus = "draft";
 
@@ -84,13 +96,274 @@ public partial class Form1 : Form
         _currentDay = DateTime.Now.ToString("yyyy-MM-dd");
         _dayPath = Path.Combine(_dataRoot, "Dias", _currentDay);
 
-        BuildUi();
+        BuildDashboardUi();
         EnsureBaseData();
         EnsureDay(_currentDay);
         LoadNotes();
         RefreshAssetsList();
         LoadPreviews();
         SetStatus("Listo. Trabajando sobre el día " + _currentDay + ".");
+    }
+
+    private void BuildDashboardUi()
+    {
+        BackColor = Color.FromArgb(8, 11, 24);
+        ForeColor = Color.FromArgb(244, 247, 255);
+        Font = new Font("Segoe UI", 10F);
+
+        var root = new TableLayoutPanel
+        {
+            Dock = DockStyle.Fill,
+            ColumnCount = 2,
+            RowCount = 3,
+            Padding = new Padding(16),
+            BackColor = BackColor
+        };
+        root.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 36F));
+        root.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 64F));
+        root.RowStyles.Add(new RowStyle(SizeType.Absolute, 132F));
+        root.RowStyles.Add(new RowStyle(SizeType.Percent, 100F));
+        root.RowStyles.Add(new RowStyle(SizeType.Absolute, 36F));
+        Controls.Add(root);
+
+        var header = MakeCardPanel(new Padding(18, 12, 18, 10));
+        root.SetColumnSpan(header, 2);
+        root.Controls.Add(header, 0, 0);
+
+        header.Controls.Add(new Label
+        {
+            Text = "Aiko Web News App",
+            AutoSize = true,
+            Font = new Font("Segoe UI", 24F, FontStyle.Bold),
+            ForeColor = Color.FromArgb(88, 243, 255),
+            Location = new Point(16, 10)
+        });
+
+        header.Controls.Add(new Label
+        {
+            Text = "Dashboard editorial interno de AikoGx Studios.",
+            AutoSize = true,
+            Font = new Font("Segoe UI", 11F, FontStyle.Bold),
+            ForeColor = Color.FromArgb(174, 184, 217),
+            Location = new Point(20, 60)
+        });
+
+        header.Controls.Add(new Label
+        {
+            Text = "Organiza avances, revisa material y prepara borradores para publicar manualmente.",
+            AutoSize = true,
+            Font = new Font("Segoe UI", 9.5F),
+            ForeColor = Color.FromArgb(174, 184, 217),
+            Location = new Point(20, 84)
+        });
+
+        _recommendationLabel = new Label
+        {
+            Text = "Recomendacion: pendiente de diagnostico editorial",
+            AutoSize = true,
+            Font = new Font("Segoe UI", 10F, FontStyle.Bold),
+            ForeColor = Color.FromArgb(255, 79, 216),
+            Location = new Point(20, 108)
+        };
+        header.Controls.Add(_recommendationLabel);
+        header.Controls.Add(MakeHeaderChip("Proyecto activo: Caos Entre Reinos: Reborn", new Point(620, 18), Color.FromArgb(60, 123, 255)));
+        header.Controls.Add(MakeHeaderChip("Modo seguro: WordPress siempre en borrador", new Point(620, 58), Color.FromArgb(98, 255, 180)));
+
+        var left = new TableLayoutPanel
+        {
+            Dock = DockStyle.Fill,
+            RowCount = 3,
+            ColumnCount = 1,
+            Padding = new Padding(0, 0, 12, 0),
+            BackColor = BackColor
+        };
+        left.RowStyles.Add(new RowStyle(SizeType.Absolute, 72F));
+        left.RowStyles.Add(new RowStyle(SizeType.Percent, 100F));
+        left.RowStyles.Add(new RowStyle(SizeType.Absolute, 118F));
+        root.Controls.Add(left, 0, 1);
+
+        var notesHeader = MakeCardPanel(new Padding(14, 10, 14, 8));
+        notesHeader.Controls.Add(new Label
+        {
+            Text = "Notas del dia",
+            AutoSize = true,
+            Font = new Font("Segoe UI", 13F, FontStyle.Bold),
+            ForeColor = Color.FromArgb(255, 79, 216),
+            Location = new Point(12, 8)
+        });
+        notesHeader.Controls.Add(new Label
+        {
+            Text = "Dia actual: " + _currentDay + "  |  Materia prima, no texto final.",
+            AutoSize = true,
+            Font = new Font("Segoe UI", 9F),
+            ForeColor = Color.FromArgb(174, 184, 217),
+            Location = new Point(14, 38)
+        });
+        left.Controls.Add(notesHeader, 0, 0);
+
+        _notesBox = new TextBox
+        {
+            Dock = DockStyle.Fill,
+            Multiline = true,
+            ScrollBars = ScrollBars.Vertical,
+            AcceptsReturn = true,
+            AcceptsTab = true,
+            BorderStyle = BorderStyle.FixedSingle,
+            BackColor = Color.FromArgb(18, 24, 42),
+            ForeColor = Color.FromArgb(244, 247, 255),
+            Font = new Font("Consolas", 10F)
+        };
+        left.Controls.Add(_notesBox, 0, 1);
+
+        var noteButtons = MakeButtonPanel();
+        noteButtons.Controls.Add(MakeButton("Guardar nota rapida", SaveNotes, true));
+        noteButtons.Controls.Add(MakeButton("Abrir carpeta del dia", () => OpenFolder(_dayPath)));
+        noteButtons.Controls.Add(MakeButton("Abrir salida", () => OpenFolder(Path.Combine(_dayPath, "Salida"))));
+        left.Controls.Add(noteButtons, 0, 2);
+
+        var right = new TableLayoutPanel
+        {
+            Dock = DockStyle.Fill,
+            RowCount = 4,
+            ColumnCount = 1,
+            BackColor = BackColor
+        };
+        right.RowStyles.Add(new RowStyle(SizeType.Absolute, 112F));
+        right.RowStyles.Add(new RowStyle(SizeType.Absolute, 86F));
+        right.RowStyles.Add(new RowStyle(SizeType.Absolute, 210F));
+        right.RowStyles.Add(new RowStyle(SizeType.Percent, 100F));
+        root.Controls.Add(right, 1, 1);
+
+        var metrics = new TableLayoutPanel
+        {
+            Dock = DockStyle.Fill,
+            ColumnCount = 7,
+            RowCount = 1,
+            BackColor = BackColor
+        };
+        for (var i = 0; i < 7; i++)
+        {
+            metrics.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100F / 7F));
+        }
+
+        _notesStateLabel = MakeMetricCard(metrics, 0, "Notas");
+        _capturesStateLabel = MakeMetricCard(metrics, 1, "Capturas");
+        _videosStateLabel = MakeMetricCard(metrics, 2, "Videos");
+        _diagnosticStateLabel = MakeMetricCard(metrics, 3, "Diagnostico");
+        _aikoPackageStateLabel = MakeMetricCard(metrics, 4, "Paquete Aiko");
+        _aikoResponseStateLabel = MakeMetricCard(metrics, 5, "Respuesta");
+        _wordpressStateLabel = MakeMetricCard(metrics, 6, "WordPress");
+        right.Controls.Add(metrics, 0, 0);
+
+        var publicationCard = MakeCardPanel(new Padding(14, 10, 14, 8));
+        publicationCard.Controls.Add(new Label
+        {
+            Text = "Estado de publicacion",
+            AutoSize = true,
+            Font = new Font("Segoe UI", 11F, FontStyle.Bold),
+            ForeColor = Color.FromArgb(88, 243, 255),
+            Location = new Point(12, 8)
+        });
+        _publicationStateLabel = new Label
+        {
+            Text = "Sin material: empieza guardando una nota del dia.",
+            AutoSize = true,
+            Font = new Font("Segoe UI", 10F, FontStyle.Bold),
+            ForeColor = Color.FromArgb(255, 209, 102),
+            Location = new Point(14, 38)
+        };
+        publicationCard.Controls.Add(_publicationStateLabel);
+        right.Controls.Add(publicationCard, 0, 1);
+
+        var flow = new TableLayoutPanel
+        {
+            Dock = DockStyle.Fill,
+            ColumnCount = 2,
+            RowCount = 1,
+            BackColor = BackColor
+        };
+        flow.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 64F));
+        flow.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 36F));
+        right.Controls.Add(flow, 0, 2);
+
+        var mainFlow = MakeCardPanel(new Padding(14, 10, 14, 8));
+        mainFlow.Controls.Add(new Label
+        {
+            Text = "Flujo principal",
+            AutoSize = true,
+            Font = new Font("Segoe UI", 12F, FontStyle.Bold),
+            ForeColor = Color.FromArgb(244, 247, 255),
+            Location = new Point(12, 8)
+        });
+        var stepButtons = MakeButtonPanel(new Point(12, 38), new Size(620, 150));
+        stepButtons.Controls.Add(MakeStepButton("1. Crear/Cargar dia", "Prepara la estructura local.", () =>
+        {
+            EnsureDay(_currentDay);
+            RefreshAssetsList();
+            SetStatus("Dia creado correctamente.");
+        }));
+        stepButtons.Controls.Add(MakeStepButton("2. Importar capturas", "Material visual del dia.", ImportCaptures));
+        stepButtons.Controls.Add(MakeStepButton("3. Organizar notas", "Separa avances, dudas y contexto.", OrganizeDeveloperNotes));
+        stepButtons.Controls.Add(MakeStepButton("4. Analizar material", "Decide formato recomendado.", AnalyzeMaterial));
+        stepButtons.Controls.Add(MakeStepButton("5. Paquete para Aiko", "Prompt limpio para Aiko.", GenerateAikoPackage, true));
+        stepButtons.Controls.Add(MakeStepButton("6. Guardar respuesta", "Pegar respuesta en la tab Aiko.", SaveAikoResponse));
+        stepButtons.Controls.Add(MakeStepButton("7. Borrador WordPress", "Siempre draft o manual.", CreateWordPressDraft));
+        mainFlow.Controls.Add(stepButtons);
+        flow.Controls.Add(mainFlow, 0, 0);
+
+        var tools = MakeCardPanel(new Padding(14, 10, 14, 8));
+        tools.Controls.Add(new Label
+        {
+            Text = "Herramientas",
+            AutoSize = true,
+            Font = new Font("Segoe UI", 12F, FontStyle.Bold),
+            ForeColor = Color.FromArgb(244, 247, 255),
+            Location = new Point(12, 8)
+        });
+        var toolButtons = MakeButtonPanel(new Point(12, 38), new Size(340, 150));
+        toolButtons.Controls.Add(MakeButton("Importar videos", ImportVideos));
+        toolButtons.Controls.Add(MakeButton("Preparar contenido base", PrepareContent));
+        toolButtons.Controls.Add(MakeButton("Content Bank", GenerateContentBankIdeas));
+        toolButtons.Controls.Add(MakeButton("Abrir Content Bank", OpenContentBankFolder));
+        toolButtons.Controls.Add(MakeButton("Borrador manual", OpenManualWordPressDraft));
+        toolButtons.Controls.Add(MakeButton("Marcar publicado", MarkAsPublished));
+        tools.Controls.Add(toolButtons);
+        flow.Controls.Add(tools, 1, 0);
+
+        var previewTabs = new TabControl { Dock = DockStyle.Fill };
+        _previewDiagnostic = MakePreviewBox();
+        _previewOrganizedNotes = MakePreviewBox();
+        _previewWeb = MakePreviewBox();
+        _previewDiscord = MakePreviewBox();
+        _previewX = MakePreviewBox();
+        _previewRedes = MakePreviewBox();
+        _previewWordPress = MakePreviewBox();
+        _assetsList = new ListBox
+        {
+            Dock = DockStyle.Fill,
+            BackColor = Color.FromArgb(18, 24, 42),
+            ForeColor = Color.FromArgb(244, 247, 255),
+            BorderStyle = BorderStyle.FixedSingle,
+            Font = new Font("Consolas", 9.5F)
+        };
+        previewTabs.TabPages.Add(MakePreviewPage("Diagnostico", _previewDiagnostic));
+        previewTabs.TabPages.Add(MakePreviewPage("Notas organizadas", _previewOrganizedNotes));
+        previewTabs.TabPages.Add(MakeAikoResponsePage());
+        previewTabs.TabPages.Add(MakePreviewPage("Web", _previewWeb));
+        previewTabs.TabPages.Add(MakePreviewPage("Redes", _previewRedes));
+        previewTabs.TabPages.Add(MakePreviewPage("WordPress", _previewWordPress));
+        previewTabs.TabPages.Add(MakePreviewPage("Material", _assetsList));
+        right.Controls.Add(previewTabs, 0, 3);
+
+        _statusLabel = new Label
+        {
+            Dock = DockStyle.Fill,
+            TextAlign = ContentAlignment.MiddleLeft,
+            ForeColor = Color.FromArgb(174, 184, 217),
+            Padding = new Padding(6, 0, 0, 0)
+        };
+        root.SetColumnSpan(_statusLabel, 2);
+        root.Controls.Add(_statusLabel, 0, 2);
     }
 
     private void BuildUi()
@@ -299,6 +572,104 @@ public partial class Form1 : Form
         };
         page.Controls.Add(preview);
         return page;
+    }
+
+    private static TabPage MakePreviewPage(string title, Control preview)
+    {
+        var page = new TabPage(title)
+        {
+            BackColor = Color.FromArgb(8, 11, 24),
+            ForeColor = Color.White
+        };
+        page.Controls.Add(preview);
+        return page;
+    }
+
+    private static Panel MakeCardPanel(Padding padding)
+    {
+        return new Panel
+        {
+            Dock = DockStyle.Fill,
+            BackColor = Color.FromArgb(18, 24, 42),
+            Padding = padding,
+            Margin = new Padding(0, 0, 8, 8)
+        };
+    }
+
+    private static Label MakeHeaderChip(string text, Point location, Color borderColor)
+    {
+        var label = new Label
+        {
+            Text = text,
+            AutoSize = true,
+            Font = new Font("Segoe UI", 9F, FontStyle.Bold),
+            ForeColor = Color.FromArgb(244, 247, 255),
+            BackColor = Color.FromArgb(24, 33, 58),
+            Location = location,
+            Padding = new Padding(10, 6, 10, 6)
+        };
+        label.BorderStyle = BorderStyle.FixedSingle;
+        return label;
+    }
+
+    private static FlowLayoutPanel MakeButtonPanel()
+    {
+        return new FlowLayoutPanel
+        {
+            Dock = DockStyle.Fill,
+            FlowDirection = FlowDirection.LeftToRight,
+            WrapContents = true,
+            BackColor = Color.Transparent,
+            Padding = new Padding(0, 6, 0, 0)
+        };
+    }
+
+    private static FlowLayoutPanel MakeButtonPanel(Point location, Size size)
+    {
+        return new FlowLayoutPanel
+        {
+            Location = location,
+            Size = size,
+            FlowDirection = FlowDirection.LeftToRight,
+            WrapContents = true,
+            BackColor = Color.Transparent
+        };
+    }
+
+    private Label MakeMetricCard(TableLayoutPanel parent, int column, string title)
+    {
+        var panel = MakeCardPanel(new Padding(10));
+        panel.Margin = new Padding(0, 0, 8, 8);
+        panel.Controls.Add(new Label
+        {
+            Text = title,
+            AutoSize = true,
+            Font = new Font("Segoe UI", 8.5F, FontStyle.Bold),
+            ForeColor = Color.FromArgb(174, 184, 217),
+            Location = new Point(8, 8)
+        });
+
+        var state = new Label
+        {
+            Text = "Pendiente",
+            AutoSize = true,
+            Font = new Font("Segoe UI", 10F, FontStyle.Bold),
+            ForeColor = Color.FromArgb(255, 209, 102),
+            Location = new Point(8, 38)
+        };
+        panel.Controls.Add(state);
+        parent.Controls.Add(panel, column, 0);
+        return state;
+    }
+
+    private Button MakeStepButton(string title, string description, Action action, bool primary = false)
+    {
+        var button = MakeButton(title + Environment.NewLine + description, action, primary);
+        button.Width = 190;
+        button.Height = 48;
+        button.TextAlign = ContentAlignment.MiddleLeft;
+        button.Font = new Font("Segoe UI", 8.8F, FontStyle.Bold);
+        return button;
     }
 
     private TabPage MakeAikoResponsePage()
@@ -539,6 +910,11 @@ public partial class Form1 : Form
         {
             _assetsList.Items.Add("No se detectaron vídeos.");
         }
+    }
+
+    private void RefreshDashboardAfterAssets()
+    {
+        UpdateDashboardStatus();
     }
 
     private string[] GetFiles(string daySubfolder)
@@ -1742,6 +2118,60 @@ public partial class Form1 : Form
         _recommendationLabel.Text = "Recomendación: " + ToTitle(recommendedType);
     }
 
+    private void UpdateDashboardStatus()
+    {
+        if (_notesStateLabel is null || _publicationStateLabel is null)
+        {
+            return;
+        }
+
+        var output = Path.Combine(_dayPath, "Salida");
+        var notesReady = !string.IsNullOrWhiteSpace(_notesBox?.Text) || File.Exists(GetNotePath());
+        var captures = GetFiles("Capturas").Length;
+        var videos = GetFiles("Videos").Length;
+        var diagnosticReady = File.Exists(Path.Combine(output, "diagnostico_editorial.md"));
+        var packageReady = File.Exists(GetAikoPackagePath());
+        var responseReady = File.Exists(Path.Combine(output, "respuesta_aiko.md"));
+        var wordpressReady = File.Exists(Path.Combine(output, "wordpress_borrador_manual.md")) || File.Exists(Path.Combine(output, "wordpress_borrador_resultado.md"));
+
+        SetMetricState(_notesStateLabel, notesReady ? "Listo" : "Pendiente", notesReady);
+        SetMetricState(_capturesStateLabel, captures > 0 ? captures + " archivo(s)" : "Pendiente", captures > 0);
+        SetMetricState(_videosStateLabel, videos > 0 ? videos + " archivo(s)" : "Pendiente", videos > 0);
+        SetMetricState(_diagnosticStateLabel, diagnosticReady ? "Listo" : "Pendiente", diagnosticReady);
+        SetMetricState(_aikoPackageStateLabel, packageReady ? "Listo" : "Pendiente", packageReady);
+        SetMetricState(_aikoResponseStateLabel, responseReady ? "Listo" : "Pendiente", responseReady);
+        SetMetricState(_wordpressStateLabel, wordpressReady ? "Draft listo" : "Pendiente", wordpressReady);
+
+        var recommendation = _recommendationLabel.Text
+            .Replace("RecomendaciÃ³n:", "", StringComparison.OrdinalIgnoreCase)
+            .Replace("Recomendacion:", "", StringComparison.OrdinalIgnoreCase)
+            .Trim()
+            .ToLowerInvariant();
+
+        var publication = recommendation switch
+        {
+            "" or "pendiente de diagnostico editorial" or "pendiente de diagnÃ³stico editorial" => "Sin material: guarda notas y analiza antes de publicar.",
+            "no publicar todavÃ­a" or "no publicar todavia" => "No publicar todavia: falta contexto o hay riesgo editorial.",
+            "nota interna" => "Necesita contexto: mejor nota interna antes de crear contenido publico.",
+            "solo redes" => "Listo para redes: Discord/X primero, WordPress no es accion principal.",
+            "idea para vÃ­deo" or "idea para video" => "Listo para pieza visual: prepara clip o captura antes de publicar.",
+            "mini devlog" => "Listo para mini update: revisar contexto antes de web.",
+            "devlog completo" => "Listo para devlog web: se puede preparar borrador WordPress en draft.",
+            _ => "Revisa diagnostico: la app recomienda " + recommendation + "."
+        };
+
+        _publicationStateLabel.Text = publication;
+        _publicationStateLabel.ForeColor = publication.StartsWith("Listo", StringComparison.OrdinalIgnoreCase)
+            ? Color.FromArgb(98, 255, 180)
+            : Color.FromArgb(255, 209, 102);
+    }
+
+    private static void SetMetricState(Label label, string text, bool ready)
+    {
+        label.Text = text;
+        label.ForeColor = ready ? Color.FromArgb(98, 255, 180) : Color.FromArgb(255, 209, 102);
+    }
+
     private static string ToTitle(string value)
     {
         return string.IsNullOrWhiteSpace(value) ? "Pendiente" : char.ToUpperInvariant(value[0]) + value[1..];
@@ -2434,9 +2864,35 @@ public partial class Form1 : Form
 
     private void LoadPreviews()
     {
+        _previewDiagnostic.Text = ReadOutputOrPlaceholder("diagnostico_editorial.md");
+        _previewOrganizedNotes.Text = ReadOutputOrPlaceholder("notas_organizadas.md");
         _previewWeb.Text = ReadOutputOrPlaceholder("entrada_web.md");
         _previewDiscord.Text = ReadOutputOrPlaceholder("post_discord.md");
         _previewX.Text = ReadOutputOrPlaceholder("post_x.md");
+        _previewRedes.Text = "# Discord" + Environment.NewLine + Environment.NewLine
+            + ReadOutputOrPlaceholder("post_discord.md") + Environment.NewLine + Environment.NewLine
+            + "# X" + Environment.NewLine + Environment.NewLine
+            + ReadOutputOrPlaceholder("post_x.md");
+        _previewWordPress.Text = ReadWordPressPreview();
+        UpdateDashboardStatus();
+    }
+
+    private string ReadWordPressPreview()
+    {
+        var output = Path.Combine(_dayPath, "Salida");
+        var result = Path.Combine(output, "wordpress_borrador_resultado.md");
+        if (File.Exists(result))
+        {
+            return File.ReadAllText(result, Encoding.UTF8);
+        }
+
+        var manual = Path.Combine(output, "wordpress_borrador_manual.md");
+        if (File.Exists(manual))
+        {
+            return File.ReadAllText(manual, Encoding.UTF8);
+        }
+
+        return "Todavia no hay borrador WordPress. Cuando se cree, siempre sera en estado draft o como borrador manual.";
     }
 
     private string ReadOutputOrPlaceholder(string fileName)
@@ -2679,6 +3135,7 @@ public partial class Form1 : Form
     private void SetStatus(string message)
     {
         _statusLabel.Text = DateTime.Now.ToString("HH:mm:ss") + "  " + message;
+        UpdateDashboardStatus();
     }
 
     private void Log(string message)
