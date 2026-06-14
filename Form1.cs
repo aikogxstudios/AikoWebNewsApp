@@ -100,13 +100,466 @@ public partial class Form1 : Form
         _currentDay = DateTime.Now.ToString("yyyy-MM-dd");
         _dayPath = Path.Combine(_dataRoot, "Dias", _currentDay);
 
-        BuildPremiumDashboardUi();
+        WindowState = FormWindowState.Maximized;
+        MinimumSize = new Size(1180, 760);
+        BuildCompleteDashboardUi();
         EnsureBaseData();
         EnsureDay(_currentDay);
         LoadNotes();
         RefreshAssetsList();
         LoadPreviews();
         SetStatus("Listo. Trabajando sobre el día " + _currentDay + ".");
+    }
+
+    private void BuildCompleteDashboardUi()
+    {
+        BackColor = Color.FromArgb(7, 9, 20);
+        ForeColor = Color.FromArgb(244, 247, 255);
+        Font = new Font("Segoe UI", 10F);
+
+        var shell = new TableLayoutPanel
+        {
+            Dock = DockStyle.Fill,
+            ColumnCount = 2,
+            RowCount = 1,
+            BackColor = BackColor
+        };
+        shell.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, 250F));
+        shell.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100F));
+        Controls.Add(shell);
+
+        shell.Controls.Add(BuildCompleteSidebar(), 0, 0);
+
+        var main = new TableLayoutPanel
+        {
+            Dock = DockStyle.Fill,
+            ColumnCount = 1,
+            RowCount = 3,
+            BackColor = BackColor,
+            Padding = new Padding(16, 12, 16, 8)
+        };
+        main.RowStyles.Add(new RowStyle(SizeType.Absolute, 94F));
+        main.RowStyles.Add(new RowStyle(SizeType.Percent, 100F));
+        main.RowStyles.Add(new RowStyle(SizeType.Absolute, 38F));
+        shell.Controls.Add(main, 1, 0);
+
+        main.Controls.Add(BuildCompleteHeader(), 0, 0);
+        main.Controls.Add(BuildCompleteHome(), 0, 1);
+
+        _statusLabel = new Label
+        {
+            Dock = DockStyle.Fill,
+            TextAlign = ContentAlignment.MiddleLeft,
+            ForeColor = Color.FromArgb(174, 184, 217),
+            BackColor = Color.FromArgb(8, 11, 24),
+            Padding = new Padding(10, 0, 0, 0)
+        };
+        main.Controls.Add(_statusLabel, 0, 2);
+    }
+
+    private Panel BuildCompleteSidebar()
+    {
+        var sidebar = new Panel
+        {
+            Dock = DockStyle.Fill,
+            BackColor = Color.FromArgb(12, 15, 31),
+            Padding = new Padding(14)
+        };
+
+        sidebar.Controls.Add(new Label
+        {
+            Text = "AIKOGX",
+            AutoSize = true,
+            Font = new Font("Segoe UI", 19F, FontStyle.Bold),
+            ForeColor = Color.FromArgb(88, 243, 255),
+            Location = new Point(16, 16)
+        });
+
+        sidebar.Controls.Add(new Label
+        {
+            Text = "Aiko Web News App",
+            AutoSize = true,
+            Font = new Font("Segoe UI", 9.5F, FontStyle.Bold),
+            ForeColor = Color.FromArgb(174, 184, 217),
+            Location = new Point(18, 58)
+        });
+
+        var nav = new FlowLayoutPanel
+        {
+            Location = new Point(10, 96),
+            Size = new Size(220, 456),
+            FlowDirection = FlowDirection.TopDown,
+            WrapContents = false,
+            BackColor = Color.Transparent
+        };
+
+        foreach (var item in new[]
+        {
+            "Inicio",
+            "Notas del Dia",
+            "Devlogs",
+            "Discord",
+            "X (Twitter)",
+            "TikTok / Shorts",
+            "itch.io",
+            "Ideas / Content Bank",
+            "Tareas",
+            "Calendario",
+            "Archivos y Material",
+            "Estado del Proyecto",
+            "Ajustes"
+        })
+        {
+            nav.Controls.Add(MakeSidebarButton(item));
+        }
+
+        sidebar.Controls.Add(nav);
+
+        var project = new Panel
+        {
+            BackColor = Color.FromArgb(18, 24, 42),
+            Location = new Point(14, 572),
+            Size = new Size(214, 150),
+            Padding = new Padding(12)
+        };
+        project.Controls.Add(new Label
+        {
+            Text = "Proyecto actual",
+            AutoSize = true,
+            Font = new Font("Segoe UI", 9F, FontStyle.Bold),
+            ForeColor = Color.FromArgb(174, 184, 217),
+            Location = new Point(12, 10)
+        });
+        project.Controls.Add(new Label
+        {
+            Text = "Caos Entre Reinos",
+            AutoSize = true,
+            Font = new Font("Segoe UI", 11F, FontStyle.Bold),
+            ForeColor = Color.FromArgb(244, 247, 255),
+            Location = new Point(12, 36)
+        });
+        project.Controls.Add(new Label
+        {
+            Text = "RPG | Estrategia | Cartas",
+            AutoSize = true,
+            Font = new Font("Segoe UI", 8.5F),
+            ForeColor = Color.FromArgb(174, 184, 217),
+            Location = new Point(12, 64)
+        });
+        var details = MakeButton("Ver detalles del proyecto", () => SetStatus("Detalles del proyecto: pendiente de pantalla propia."));
+        details.Width = 182;
+        details.Location = new Point(12, 98);
+        project.Controls.Add(details);
+        sidebar.Controls.Add(project);
+        return sidebar;
+    }
+
+    private Panel BuildCompleteHeader()
+    {
+        var header = MakePremiumCard(new Padding(18, 12, 18, 10));
+
+        header.Controls.Add(new Label
+        {
+            Text = "Hola, Fak",
+            AutoSize = true,
+            Font = new Font("Segoe UI", 22F, FontStyle.Bold),
+            ForeColor = Color.FromArgb(244, 247, 255),
+            Location = new Point(18, 10)
+        });
+        header.Controls.Add(new Label
+        {
+            Text = "Centro de mando editorial de AikoGx",
+            AutoSize = true,
+            Font = new Font("Segoe UI", 10F, FontStyle.Bold),
+            ForeColor = Color.FromArgb(174, 184, 217),
+            Location = new Point(22, 54)
+        });
+
+        var today = new Label
+        {
+            Text = _currentDay + "  |  Buen dia para convertir notas en contenido claro.",
+            AutoSize = false,
+            Size = new Size(450, 42),
+            Font = new Font("Segoe UI", 10F, FontStyle.Bold),
+            ForeColor = Color.FromArgb(244, 247, 255),
+            BackColor = Color.FromArgb(24, 33, 58),
+            TextAlign = ContentAlignment.MiddleCenter,
+            Location = new Point(420, 20)
+        };
+        header.Controls.Add(today);
+
+        header.Controls.Add(MakeHeaderButton("!", new Point(900, 22), () => SetStatus("Notificaciones: pendiente.")));
+        header.Controls.Add(MakeHeaderButton("?", new Point(950, 22), () => SetStatus("Ayuda: pega el paquete, analiza y revisa antes de publicar.")));
+        header.Controls.Add(MakeHeaderButton("*", new Point(1000, 22), () => SetStatus("Ajustes: pendiente.")));
+        header.Controls.Add(MakeHeaderChip("Modo oscuro", new Point(1050, 24), Color.FromArgb(138, 77, 255)));
+        return header;
+    }
+
+    private Control BuildCompleteHome()
+    {
+        var scroll = new Panel
+        {
+            Dock = DockStyle.Fill,
+            AutoScroll = true,
+            BackColor = BackColor
+        };
+
+        var grid = new TableLayoutPanel
+        {
+            AutoSize = true,
+            AutoSizeMode = AutoSizeMode.GrowAndShrink,
+            ColumnCount = 2,
+            RowCount = 4,
+            Width = 1180,
+            BackColor = BackColor
+        };
+        grid.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, 760F));
+        grid.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, 400F));
+        grid.RowStyles.Add(new RowStyle(SizeType.Absolute, 145F));
+        grid.RowStyles.Add(new RowStyle(SizeType.Absolute, 300F));
+        grid.RowStyles.Add(new RowStyle(SizeType.Absolute, 250F));
+        grid.RowStyles.Add(new RowStyle(SizeType.Absolute, 360F));
+        scroll.Controls.Add(grid);
+
+        grid.Controls.Add(BuildWorkflowOverviewCard(), 0, 0);
+        grid.Controls.Add(BuildRecommendationSummaryCard(), 1, 0);
+        grid.Controls.Add(BuildDashboardSummaryGrid(), 0, 1);
+        grid.Controls.Add(BuildQuickActionsAndTasksPanel(), 1, 1);
+        grid.Controls.Add(BuildPackageInputCard(), 0, 2);
+        grid.Controls.Add(BuildLatestItemsCard(), 1, 2);
+        var previewArea = BuildPreviewAreaCard();
+        grid.Controls.Add(previewArea, 0, 3);
+        grid.SetColumnSpan(previewArea, 2);
+        return scroll;
+    }
+
+    private Panel BuildWorkflowOverviewCard()
+    {
+        var card = MakePremiumCard(new Padding(16));
+        card.Controls.Add(new Label
+        {
+            Text = "Flujo de trabajo diario",
+            AutoSize = true,
+            Font = new Font("Segoe UI", 13F, FontStyle.Bold),
+            ForeColor = Color.FromArgb(244, 247, 255),
+            Location = new Point(16, 10)
+        });
+
+        var flow = new FlowLayoutPanel
+        {
+            Location = new Point(16, 46),
+            Size = new Size(720, 76),
+            FlowDirection = FlowDirection.LeftToRight,
+            WrapContents = false,
+            BackColor = Color.Transparent
+        };
+        flow.Controls.Add(MakeFlowStep("1", "Capturar", "Notas y material", SaveNotes));
+        flow.Controls.Add(MakeFlowStep("2", "Organizar", "Separar contexto", OrganizeDeveloperNotes));
+        flow.Controls.Add(MakeFlowStep("3", "Recomendar", "Aiko decide formato", AnalyzeWithAiko, true));
+        flow.Controls.Add(MakeFlowStep("4", "Crear contenido", "Paquete o borrador", GenerateAikoPackage));
+        flow.Controls.Add(MakeFlowStep("5", "Publicar / revisar", "Manual y seguro", OpenManualWordPressDraft));
+        card.Controls.Add(flow);
+        return card;
+    }
+
+    private Panel BuildRecommendationSummaryCard()
+    {
+        var card = MakePremiumCard(new Padding(16));
+        card.Controls.Add(new Label
+        {
+            Text = "Recomendacion de Aiko",
+            AutoSize = true,
+            Font = new Font("Segoe UI", 13F, FontStyle.Bold),
+            ForeColor = Color.FromArgb(88, 243, 255),
+            Location = new Point(16, 10)
+        });
+        _recommendationLabel = new Label
+        {
+            Text = "Recomendacion: pendiente de diagnostico editorial",
+            Visible = false
+        };
+        card.Controls.Add(_recommendationLabel);
+        _publicationStateLabel = new Label
+        {
+            Text = "Tipo recomendado: pendiente",
+            AutoSize = false,
+            Size = new Size(350, 30),
+            Font = new Font("Segoe UI", 10F, FontStyle.Bold),
+            ForeColor = Color.FromArgb(255, 209, 102),
+            Location = new Point(18, 46)
+        };
+        card.Controls.Add(_publicationStateLabel);
+        _aikoRecommendationDetailLabel = new Label
+        {
+            Text = "Motivo: pega o escribe material y analiza.",
+            AutoSize = false,
+            Size = new Size(350, 34),
+            Font = new Font("Segoe UI", 9F),
+            ForeColor = Color.FromArgb(174, 184, 217),
+            Location = new Point(18, 76)
+        };
+        card.Controls.Add(_aikoRecommendationDetailLabel);
+        _nextStepLabel = new Label
+        {
+            Text = "Siguiente paso: Analizar con Aiko.",
+            AutoSize = false,
+            Size = new Size(350, 28),
+            Font = new Font("Segoe UI", 9F, FontStyle.Bold),
+            ForeColor = Color.FromArgb(255, 79, 216),
+            Location = new Point(18, 108)
+        };
+        card.Controls.Add(_nextStepLabel);
+        _recommendedActionButton = MakeButton("Ver idea completa", ExecuteRecommendedAction, true);
+        _recommendedActionButton.Width = 175;
+        _recommendedActionButton.Height = 34;
+        _recommendedActionButton.Location = new Point(205, 102);
+        card.Controls.Add(_recommendedActionButton);
+        return card;
+    }
+
+    private Control BuildDashboardSummaryGrid()
+    {
+        var grid = new TableLayoutPanel
+        {
+            Dock = DockStyle.Fill,
+            ColumnCount = 2,
+            RowCount = 2,
+            BackColor = BackColor
+        };
+        grid.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 50F));
+        grid.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 50F));
+        grid.RowStyles.Add(new RowStyle(SizeType.Percent, 50F));
+        grid.RowStyles.Add(new RowStyle(SizeType.Percent, 50F));
+        grid.Controls.Add(BuildStateTodayCard(), 0, 0);
+        grid.Controls.Add(BuildWeeklyProgressCard(), 1, 0);
+        grid.Controls.Add(BuildDistributionCard(), 0, 1);
+        grid.Controls.Add(BuildCompactMaterialCard(), 1, 1);
+        return grid;
+    }
+
+    private Panel BuildStateTodayCard()
+    {
+        var card = MakePremiumCard(new Padding(14));
+        card.Controls.Add(new Label { Text = "Estado de hoy", AutoSize = true, Font = new Font("Segoe UI", 12F, FontStyle.Bold), ForeColor = Color.FromArgb(244, 247, 255), Location = new Point(14, 10) });
+        var grid = new TableLayoutPanel { Location = new Point(12, 42), Size = new Size(330, 92), ColumnCount = 2, RowCount = 3, BackColor = Color.Transparent };
+        grid.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 50F));
+        grid.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 50F));
+        for (var i = 0; i < 3; i++) grid.RowStyles.Add(new RowStyle(SizeType.Percent, 33F));
+        _notesStateLabel = MakeCompactMetricCard(grid, 0, 0, "Notas del dia");
+        _aikoPackageStateLabel = MakeCompactMetricCard(grid, 1, 0, "Ideas generadas");
+        _aikoResponseStateLabel = MakeCompactMetricCard(grid, 0, 1, "Contenido listo");
+        _diagnosticStateLabel = MakeCompactMetricCard(grid, 1, 1, "Analisis");
+        _wordpressStateLabel = MakeCompactMetricCard(grid, 0, 2, "WordPress");
+        card.Controls.Add(grid);
+        return card;
+    }
+
+    private Panel BuildWeeklyProgressCard()
+    {
+        var card = MakePremiumCard(new Padding(14));
+        card.Controls.Add(new Label { Text = "Progreso semanal", AutoSize = true, Font = new Font("Segoe UI", 12F, FontStyle.Bold), ForeColor = Color.FromArgb(244, 247, 255), Location = new Point(14, 10) });
+        card.Controls.Add(new Label { Text = "Objetivo videos: 0/2", AutoSize = true, Font = new Font("Segoe UI", 18F, FontStyle.Bold), ForeColor = Color.FromArgb(98, 255, 180), Location = new Point(16, 46) });
+        card.Controls.Add(new Label { Text = "L  M  X  J  V  S  D\n-  -  -  -  -  -  -", AutoSize = true, Font = new Font("Consolas", 10F, FontStyle.Bold), ForeColor = Color.FromArgb(174, 184, 217), Location = new Point(18, 90) });
+        return card;
+    }
+
+    private Panel BuildDistributionCard()
+    {
+        var card = MakePremiumCard(new Padding(14));
+        card.Controls.Add(new Label { Text = "Distribucion de contenido", AutoSize = true, Font = new Font("Segoe UI", 12F, FontStyle.Bold), ForeColor = Color.FromArgb(244, 247, 255), Location = new Point(14, 10) });
+        card.Controls.Add(new Label { Text = "TikTok / Shorts  35%\nDiscord          25%\nDevlog           20%\nX                15%\nitch.io           5%", AutoSize = true, Font = new Font("Consolas", 9.5F), ForeColor = Color.FromArgb(174, 184, 217), Location = new Point(18, 44) });
+        return card;
+    }
+
+    private Panel BuildCompactMaterialCard()
+    {
+        var card = MakePremiumCard(new Padding(14));
+        card.Controls.Add(new Label { Text = "Material util", AutoSize = true, Font = new Font("Segoe UI", 12F, FontStyle.Bold), ForeColor = Color.FromArgb(244, 247, 255), Location = new Point(14, 10) });
+        var grid = new TableLayoutPanel { Location = new Point(12, 42), Size = new Size(330, 92), ColumnCount = 2, RowCount = 2, BackColor = Color.Transparent };
+        grid.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 50F));
+        grid.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 50F));
+        grid.RowStyles.Add(new RowStyle(SizeType.Percent, 50F));
+        grid.RowStyles.Add(new RowStyle(SizeType.Percent, 50F));
+        _capturesStateLabel = MakeCompactMetricCard(grid, 0, 0, "Capturas");
+        _videosStateLabel = MakeCompactMetricCard(grid, 1, 0, "Videos");
+        card.Controls.Add(grid);
+        return card;
+    }
+
+    private Panel BuildQuickActionsAndTasksPanel()
+    {
+        var card = MakePremiumCard(new Padding(16));
+        card.AutoScroll = true;
+        card.Controls.Add(new Label { Text = "Acciones rapidas", AutoSize = true, Font = new Font("Segoe UI", 13F, FontStyle.Bold), ForeColor = Color.FromArgb(244, 247, 255), Location = new Point(16, 10) });
+        var actions = MakeButtonPanel(new Point(16, 44), new Size(350, 150));
+        actions.Controls.Add(MakeButton("Nueva nota", SaveNotes, true));
+        actions.Controls.Add(MakeButton("Nuevo devlog", PrepareContent));
+        actions.Controls.Add(MakeButton("Nueva idea", GenerateContentBankIdeas));
+        actions.Controls.Add(MakeButton("Agregar captura", ImportCaptures));
+        actions.Controls.Add(MakeButton("Agregar video", ImportVideos));
+        actions.Controls.Add(MakeButton("Generar Content Bank", GenerateContentBankIdeas));
+        card.Controls.Add(actions);
+        card.Controls.Add(new Label { Text = "Para hacer hoy (4)", AutoSize = true, Font = new Font("Segoe UI", 12F, FontStyle.Bold), ForeColor = Color.FromArgb(255, 79, 216), Location = new Point(16, 208) });
+        card.Controls.Add(new Label { Text = "[ ] Alta  Pegar paquete completo\n[ ] Alta  Analizar con Aiko\n[ ] Media Revisar recomendacion\n[ ] Baja  Copiar resultado final", AutoSize = false, Size = new Size(360, 120), Font = new Font("Consolas", 9.5F), ForeColor = Color.FromArgb(174, 184, 217), Location = new Point(18, 242) });
+        return card;
+    }
+
+    private Panel BuildPackageInputCard()
+    {
+        var card = MakePremiumCard(new Padding(16));
+        card.Controls.Add(new Label { Text = "Pegar paquete para Aiko", AutoSize = true, Font = new Font("Segoe UI", 13F, FontStyle.Bold), ForeColor = Color.FromArgb(244, 247, 255), Location = new Point(16, 10) });
+        card.Controls.Add(new Label { Text = "Pega aqui el paquete completo del dia: notas, capturas, videos, diagnostico y borradores base.", AutoSize = false, Size = new Size(620, 24), Font = new Font("Segoe UI", 9.5F), ForeColor = Color.FromArgb(174, 184, 217), Location = new Point(18, 42) });
+        _aikoPackageInputBox = new TextBox { Multiline = true, ScrollBars = ScrollBars.Vertical, AcceptsReturn = true, AcceptsTab = true, BorderStyle = BorderStyle.FixedSingle, BackColor = Color.FromArgb(7, 9, 20), ForeColor = Color.FromArgb(244, 247, 255), Font = new Font("Consolas", 10F), Location = new Point(18, 70), Size = new Size(500, 130) };
+        _notesBox = _aikoPackageInputBox;
+        card.Controls.Add(_aikoPackageInputBox);
+        var actions = MakeButtonPanel(new Point(536, 70), new Size(190, 140));
+        actions.FlowDirection = FlowDirection.TopDown;
+        actions.Controls.Add(MakeButton("Pegar paquete completo", PastePackageFromClipboard));
+        actions.Controls.Add(MakeButton("Analizar con Aiko", AnalyzeWithAiko, true));
+        actions.Controls.Add(MakeButton("Copiar resultado", CopyBestResult));
+        actions.Controls.Add(MakeButton("Abrir carpeta del dia", () => OpenFolder(_dayPath)));
+        card.Controls.Add(actions);
+        return card;
+    }
+
+    private Panel BuildLatestItemsCard()
+    {
+        var card = MakePremiumCard(new Padding(16));
+        card.Controls.Add(new Label { Text = "Ultimos elementos", AutoSize = true, Font = new Font("Segoe UI", 13F, FontStyle.Bold), ForeColor = Color.FromArgb(244, 247, 255), Location = new Point(16, 10) });
+        card.Controls.Add(new Label { Text = "Ahora  Nota rapida guardada\nHoy    Diagnostico pendiente\nHoy    Content Bank local\nHoy    WordPress draft seguro", AutoSize = false, Size = new Size(350, 150), Font = new Font("Consolas", 9.5F), ForeColor = Color.FromArgb(174, 184, 217), Location = new Point(18, 48) });
+        return card;
+    }
+
+    private Panel BuildPreviewAreaCard()
+    {
+        var card = MakePremiumCard(new Padding(16));
+        var previewTabs = new TabControl { Dock = DockStyle.Fill };
+        _previewDiagnostic = MakePreviewBox();
+        _previewOrganizedNotes = MakePreviewBox();
+        _previewWeb = MakePreviewBox();
+        _previewDiscord = MakePreviewBox();
+        _previewX = MakePreviewBox();
+        _previewRedes = MakePreviewBox();
+        _previewWordPress = MakePreviewBox();
+        _assetsList = new ListBox { Dock = DockStyle.Fill, BackColor = Color.FromArgb(10, 14, 30), ForeColor = Color.FromArgb(244, 247, 255), BorderStyle = BorderStyle.FixedSingle, Font = new Font("Consolas", 9.5F) };
+        previewTabs.TabPages.Add(MakePreviewPage("Diagnostico", _previewDiagnostic));
+        previewTabs.TabPages.Add(MakePreviewPage("Notas", _previewOrganizedNotes));
+        previewTabs.TabPages.Add(MakeAikoResponsePage());
+        previewTabs.TabPages.Add(MakePreviewPage("Web", _previewWeb));
+        previewTabs.TabPages.Add(MakePreviewPage("Redes", _previewRedes));
+        previewTabs.TabPages.Add(MakePreviewPage("WordPress", _previewWordPress));
+        previewTabs.TabPages.Add(MakePreviewPage("Material", _assetsList));
+        card.Controls.Add(previewTabs);
+        return card;
+    }
+
+    private Button MakeHeaderButton(string text, Point location, Action action)
+    {
+        var button = MakeButton(text, action);
+        button.Width = 40;
+        button.Height = 34;
+        button.Location = location;
+        return button;
     }
 
     private void BuildPremiumDashboardUi()
@@ -3879,7 +4332,7 @@ public partial class Form1 : Form
 
     private void SetStatus(string message)
     {
-        _statusLabel.Text = DateTime.Now.ToString("HH:mm:ss") + "  " + message;
+        _statusLabel.Text = $"WordPress: Draft seguro  |  Proyecto: Caos Entre Reinos  |  {DateTime.Now:HH:mm:ss}  |  AikoGx System v2.0  |  {message}";
         UpdateDashboardStatus();
     }
 
