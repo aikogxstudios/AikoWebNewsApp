@@ -106,6 +106,7 @@ public partial class Form1 : Form
 
         WindowState = FormWindowState.Maximized;
         MinimumSize = new Size(1180, 760);
+        ApplyApplicationIcon();
         BuildCompleteDashboardUi();
         EnsureBaseData();
         EnsureDay(_currentDay);
@@ -167,72 +168,64 @@ public partial class Form1 : Form
         ShowSidebarSection("Inicio", false);
     }
 
+    private void ApplyApplicationIcon()
+    {
+        var iconPath = Path.Combine(AppContext.BaseDirectory, "Assets", "Logo", "AikoGx.ico");
+        if (!File.Exists(iconPath))
+        {
+            return;
+        }
+
+        try
+        {
+            using var icon = new Icon(iconPath);
+            Icon = (Icon)icon.Clone();
+        }
+        catch (Exception ex)
+        {
+            Debug.WriteLine("No se pudo cargar el icono de la app: " + ex.Message);
+        }
+    }
+
     private Panel BuildCompleteSidebar()
     {
         var sidebar = new Panel
         {
             Dock = DockStyle.Fill,
             BackColor = Color.FromArgb(12, 15, 31),
-            Padding = new Padding(14),
-            AutoScroll = true
+            Padding = new Padding(14)
         };
 
-        sidebar.Controls.Add(new Label
+        var header = new Panel
+        {
+            Dock = DockStyle.Top,
+            Height = 78,
+            BackColor = Color.Transparent
+        };
+        header.Controls.Add(new Label
         {
             Text = "AIKOGX",
             AutoSize = true,
             Font = new Font("Segoe UI", 19F, FontStyle.Bold),
             ForeColor = Color.FromArgb(88, 243, 255),
-            Location = new Point(16, 16)
+            Location = new Point(2, 2)
         });
-
-        sidebar.Controls.Add(new Label
+        header.Controls.Add(new Label
         {
             Text = "Aiko Web News App",
             AutoSize = true,
             Font = new Font("Segoe UI", 9.5F, FontStyle.Bold),
             ForeColor = Color.FromArgb(174, 184, 217),
-            Location = new Point(18, 58)
+            Location = new Point(4, 44)
         });
-
-        var nav = new FlowLayoutPanel
-        {
-            Location = new Point(10, 96),
-            Size = new Size(220, 456),
-            FlowDirection = FlowDirection.TopDown,
-            WrapContents = false,
-            BackColor = Color.Transparent,
-            AutoScroll = true
-        };
-
-        foreach (var item in new[]
-        {
-            "Inicio",
-            "Notas del Dia",
-            "Devlogs",
-            "Discord",
-            "X (Twitter)",
-            "TikTok / Shorts",
-            "itch.io",
-            "Ideas / Content Bank",
-            "Tareas",
-            "Calendario",
-            "Archivos y Material",
-            "Estado del Proyecto",
-            "Ajustes"
-        })
-        {
-            nav.Controls.Add(MakeSidebarButton(item));
-        }
-
-        sidebar.Controls.Add(nav);
 
         var project = new Panel
         {
+            Dock = DockStyle.Bottom,
+            Height = 148,
             BackColor = Color.FromArgb(18, 24, 42),
-            Location = new Point(14, 572),
-            Size = new Size(214, 150),
-            Padding = new Padding(12)
+            Padding = new Padding(12),
+            Margin = new Padding(0)
         };
         project.Controls.Add(new Label
         {
@@ -258,11 +251,64 @@ public partial class Form1 : Form
             ForeColor = Color.FromArgb(174, 184, 217),
             Location = new Point(12, 64)
         });
-        var details = MakeButton("Ver detalles del proyecto", () => SetStatus("Detalles del proyecto: pendiente de pantalla propia."));
-        details.Width = 182;
+        var details = MakeButton("Ver detalles", () => ShowSidebarSection("Estado del Proyecto", true));
+        details.Width = 170;
+        details.Height = 34;
         details.Location = new Point(12, 98);
         project.Controls.Add(details);
+
+        var navScroll = new Panel
+        {
+            Dock = DockStyle.Fill,
+            BackColor = Color.Transparent,
+            AutoScroll = true,
+            Padding = new Padding(0, 6, 0, 6),
+            Margin = new Padding(0)
+        };
+        navScroll.HorizontalScroll.Enabled = false;
+        navScroll.HorizontalScroll.Visible = false;
+
+        var nav = new FlowLayoutPanel
+        {
+            Dock = DockStyle.Top,
+            AutoSize = true,
+            AutoSizeMode = AutoSizeMode.GrowAndShrink,
+            FlowDirection = FlowDirection.TopDown,
+            WrapContents = false,
+            BackColor = Color.Transparent,
+            AutoScroll = false,
+            Padding = new Padding(0),
+            Margin = new Padding(0)
+        };
+
+        foreach (var item in new[]
+        {
+            "Inicio",
+            "Notas del Dia",
+            "Devlogs",
+            "Discord",
+            "X (Twitter)",
+            "TikTok / Shorts",
+            "itch.io",
+            "Ideas / Content Bank",
+            "Tareas",
+            "Calendario",
+            "Archivos y Material",
+            "Estado del Proyecto",
+            "Ajustes"
+        })
+        {
+            nav.Controls.Add(MakeSidebarButton(item));
+        }
+
+        ResizeSidebarButtons(nav);
+        nav.Resize += (_, _) => ResizeSidebarButtons(nav);
+        navScroll.Resize += (_, _) => ResizeSidebarButtons(nav);
+        navScroll.Controls.Add(nav);
+
         sidebar.Controls.Add(project);
+        sidebar.Controls.Add(navScroll);
+        sidebar.Controls.Add(header);
         return sidebar;
     }
 
@@ -757,14 +803,14 @@ public partial class Form1 : Form
         var panel = MakeScrollableSection();
         AddSectionTitle(panel, "Ideas / Content Bank", "Genera ideas locales para AikoGx-ContentBank. Nada se publica automaticamente.");
 
-        var actions = MakeButtonPanel(new Point(18, 74), new Size(720, 48));
+        var actions = MakeButtonPanel(new Point(18, 74), new Size(760, 82));
         actions.Controls.Add(MakeButton("Generar Content Bank", GenerateContentBankIdeas, true));
         actions.Controls.Add(MakeButton("Abrir carpeta Content Bank", OpenContentBankFolder));
         actions.Controls.Add(MakeButton("Abrir salida del dia", () => OpenFolder(Path.Combine(_dayPath, "Salida"))));
         panel.Controls.Add(actions);
 
         var preview = MakePreviewBox();
-        preview.Location = new Point(18, 140);
+        preview.Location = new Point(18, 174);
         preview.Size = new Size(760, 420);
         preview.Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right;
         preview.Text = ReadContentBankPreview();
@@ -783,7 +829,7 @@ public partial class Form1 : Form
         panel.Controls.Add(MakeTaskCheckBox("Generar Content Bank o paquete Aiko", "Media", Color.FromArgb(255, 209, 102), new Point(20, 200)));
         panel.Controls.Add(MakeTaskCheckBox("Crear borrador WordPress solo en draft", "Baja", Color.FromArgb(98, 255, 180), new Point(20, 238)));
 
-        var actions = MakeButtonPanel(new Point(18, 290), new Size(720, 54));
+        var actions = MakeButtonPanel(new Point(18, 290), new Size(760, 88));
         actions.Controls.Add(MakeButton("Ir a Notas del Dia", () => ShowSidebarSection("Notas del Dia", true), true));
         actions.Controls.Add(MakeButton("Analizar con Aiko", AnalyzeWithAiko));
         actions.Controls.Add(MakeButton("Crear borrador WordPress draft", CreateWordPressDraft));
@@ -798,7 +844,7 @@ public partial class Form1 : Form
         var videos = GetFiles("Videos");
         AddSectionTitle(panel, "Archivos y Material", $"Capturas: {captures.Length}  |  Videos: {videos.Length}");
 
-        var actions = MakeButtonPanel(new Point(18, 74), new Size(760, 54));
+        var actions = MakeButtonPanel(new Point(18, 74), new Size(760, 88));
         actions.Controls.Add(MakeButton("Importar capturas", ImportCaptures, true));
         actions.Controls.Add(MakeButton("Importar videos", ImportVideos));
         actions.Controls.Add(MakeButton("Abrir carpeta del dia", () => OpenFolder(_dayPath)));
@@ -808,7 +854,7 @@ public partial class Form1 : Form
 
         var list = new ListBox
         {
-            Location = new Point(18, 146),
+            Location = new Point(18, 178),
             Size = new Size(760, 390),
             Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right,
             BackColor = Color.FromArgb(10, 14, 30),
@@ -853,14 +899,14 @@ public partial class Form1 : Form
         var panel = MakeScrollableSection();
         AddSectionTitle(panel, "Ajustes", "Configuracion local. No se suben credenciales ni se conecta GitHub desde la app.");
 
-        var actions = MakeButtonPanel(new Point(18, 74), new Size(760, 54));
+        var actions = MakeButtonPanel(new Point(18, 74), new Size(760, 82));
         actions.Controls.Add(MakeButton("Abrir Config", () => OpenFolder(Path.Combine(_dataRoot, "Config")), true));
         actions.Controls.Add(MakeButton("Abrir Plantillas", () => OpenFolder(Path.Combine(_dataRoot, "Plantillas"))));
         actions.Controls.Add(MakeButton("Abrir Logs", () => OpenFolder(Path.Combine(_dataRoot, "Logs"))));
         panel.Controls.Add(actions);
 
         var preview = MakePreviewBox();
-        preview.Location = new Point(18, 146);
+        preview.Location = new Point(18, 174);
         preview.Size = new Size(760, 360);
         preview.Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right;
         var configPath = Path.Combine(_dataRoot, "Config", "config.json");
@@ -882,12 +928,15 @@ public partial class Form1 : Form
 
     private Panel MakeScrollableSection()
     {
-        return new Panel
+        var panel = new Panel
         {
             Dock = DockStyle.Fill,
             AutoScroll = true,
             BackColor = BackColor
         };
+        panel.HorizontalScroll.Enabled = false;
+        panel.HorizontalScroll.Visible = false;
+        return panel;
     }
 
     private void AddSectionTitle(Control parent, string title, string subtitle)
@@ -2008,14 +2057,18 @@ public partial class Form1 : Form
 
     private static FlowLayoutPanel MakeButtonPanel(Point location, Size size)
     {
-        return new FlowLayoutPanel
+        var panel = new FlowLayoutPanel
         {
             Location = location,
             Size = size,
             FlowDirection = FlowDirection.LeftToRight,
             WrapContents = true,
-            BackColor = Color.Transparent
+            BackColor = Color.Transparent,
+            AutoScroll = true
         };
+        panel.HorizontalScroll.Enabled = false;
+        panel.HorizontalScroll.Visible = false;
+        return panel;
     }
 
     private Label MakeMetricCard(TableLayoutPanel parent, int column, string title)
@@ -2069,13 +2122,31 @@ public partial class Form1 : Form
     {
         var button = MakeButton(text, () => NavigateSidebar(text));
         button.Tag = text;
-        button.Width = 198;
+        button.Width = 176;
         button.Height = 34;
         button.TextAlign = ContentAlignment.MiddleLeft;
         button.BackColor = text == "Inicio" ? Color.FromArgb(55, 45, 110) : Color.FromArgb(16, 21, 40);
         button.FlatAppearance.BorderColor = text == "Inicio" ? Color.FromArgb(255, 79, 216) : Color.FromArgb(38, 48, 82);
         _sidebarButtons.Add(button);
         return button;
+    }
+
+    private void ResizeSidebarButtons(FlowLayoutPanel nav)
+    {
+        var availableWidth = nav.Parent?.ClientSize.Width ?? nav.ClientSize.Width;
+        var width = Math.Max(148, availableWidth - SystemInformation.VerticalScrollBarWidth - 8);
+        nav.Width = width;
+        foreach (Control control in nav.Controls)
+        {
+            if (control is Button button)
+            {
+                button.Width = width;
+            }
+        }
+
+        nav.HorizontalScroll.Value = 0;
+        nav.HorizontalScroll.Enabled = false;
+        nav.HorizontalScroll.Visible = false;
     }
 
     private Button MakeFlowStep(string number, string title, string description, Action action, bool primary = false)
