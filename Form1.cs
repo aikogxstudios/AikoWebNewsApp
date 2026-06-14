@@ -24,6 +24,7 @@ public partial class Form1 : Form
     private Label _publicationStateLabel = null!;
     private Label _aikoRecommendationDetailLabel = null!;
     private Label _nextStepLabel = null!;
+    private Button _recommendedActionButton = null!;
     private TextBox _previewWeb = null!;
     private TextBox _previewDiscord = null!;
     private TextBox _previewX = null!;
@@ -32,6 +33,7 @@ public partial class Form1 : Form
     private TextBox _previewRedes = null!;
     private TextBox _previewWordPress = null!;
     private TextBox _aikoResponseBox = null!;
+    private TextBox _aikoPackageInputBox = null!;
     private const string WordPressDraftStatus = "draft";
 
     private sealed record EditorialDiagnostic(
@@ -134,27 +136,15 @@ public partial class Form1 : Form
             BackColor = BackColor,
             Padding = new Padding(16, 14, 16, 10)
         };
-        main.RowStyles.Add(new RowStyle(SizeType.Absolute, 86F));
-        main.RowStyles.Add(new RowStyle(SizeType.Absolute, 186F));
+        main.RowStyles.Add(new RowStyle(SizeType.Absolute, 82F));
+        main.RowStyles.Add(new RowStyle(SizeType.Absolute, 130F));
         main.RowStyles.Add(new RowStyle(SizeType.Percent, 100F));
         main.RowStyles.Add(new RowStyle(SizeType.Absolute, 36F));
         shell.Controls.Add(main, 1, 0);
 
         main.Controls.Add(BuildPremiumHeader(), 0, 0);
 
-        var topGrid = new TableLayoutPanel
-        {
-            Dock = DockStyle.Fill,
-            ColumnCount = 2,
-            RowCount = 1,
-            BackColor = BackColor
-        };
-        topGrid.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 68F));
-        topGrid.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 32F));
-        main.Controls.Add(topGrid, 0, 1);
-
-        topGrid.Controls.Add(BuildDailyFlowCard(), 0, 0);
-        topGrid.Controls.Add(BuildAikoRecommendationCard(), 1, 0);
+        main.Controls.Add(BuildDailyFlowCard(), 0, 1);
 
         var workGrid = new TableLayoutPanel
         {
@@ -163,8 +153,8 @@ public partial class Form1 : Form
             RowCount = 1,
             BackColor = BackColor
         };
-        workGrid.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 68F));
-        workGrid.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 32F));
+        workGrid.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 66F));
+        workGrid.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 34F));
         main.Controls.Add(workGrid, 0, 2);
 
         workGrid.Controls.Add(BuildWorkAreaCard(), 0, 0);
@@ -226,7 +216,7 @@ public partial class Form1 : Form
             "X",
             "TikTok / Shorts",
             "itch.io",
-            "Ideas / Content Bank",
+            "Banco de ideas",
             "Tareas",
             "Calendario",
             "Material",
@@ -292,28 +282,38 @@ public partial class Form1 : Form
     private Panel BuildDailyFlowCard()
     {
         var card = MakePremiumCard(new Padding(16));
+        card.AutoScroll = true;
         card.Controls.Add(new Label
         {
-            Text = "Flujo diario",
+            Text = "Flujo simple",
             AutoSize = true,
             Font = new Font("Segoe UI", 13F, FontStyle.Bold),
             ForeColor = Color.FromArgb(244, 247, 255),
             Location = new Point(16, 10)
         });
 
+        card.Controls.Add(new Label
+        {
+            Text = "Pegar -> Analizar -> Revisar -> Copiar",
+            AutoSize = true,
+            Font = new Font("Segoe UI", 10F, FontStyle.Bold),
+            ForeColor = Color.FromArgb(255, 79, 216),
+            Location = new Point(140, 14)
+        });
+
         var flow = new FlowLayoutPanel
         {
-            Location = new Point(16, 48),
-            Size = new Size(700, 110),
+            Location = new Point(16, 44),
+            Size = new Size(920, 70),
             BackColor = Color.Transparent,
             FlowDirection = FlowDirection.LeftToRight,
             WrapContents = true
         };
 
-        flow.Controls.Add(MakeFlowStep("1", "Capturar", "Notas y material", SaveNotes));
-        flow.Controls.Add(MakeFlowStep("2", "Organizar", "Limpiar contexto", OrganizeDeveloperNotes));
-        flow.Controls.Add(MakeFlowStep("3", "Recomendar", "Diagnostico Aiko", AnalyzeMaterial));
-        flow.Controls.Add(MakeFlowStep("4", "Crear", "Paquete o draft", GenerateAikoPackage, true));
+        flow.Controls.Add(MakeFlowStep("1", "Pegar", "Añade aqui el paquete del dia.", PastePackageFromClipboard));
+        flow.Controls.Add(MakeFlowStep("2", "Analizar", "Aiko decide web, redes o video.", AnalyzeWithAiko, true));
+        flow.Controls.Add(MakeFlowStep("3", "Revisar", "Comprueba el texto antes de usarlo.", OpenEditorialDiagnostic));
+        flow.Controls.Add(MakeFlowStep("4", "Copiar", "Copia el resultado final.", CopyBestResult));
         card.Controls.Add(flow);
         return card;
     }
@@ -362,6 +362,12 @@ public partial class Form1 : Form
             Location = new Point(18, 132)
         };
         card.Controls.Add(_nextStepLabel);
+
+        _recommendedActionButton = MakeButton("Analizar con Aiko", ExecuteRecommendedAction, true);
+        _recommendedActionButton.Width = 250;
+        _recommendedActionButton.Height = 42;
+        _recommendedActionButton.Location = new Point(18, 154);
+        card.Controls.Add(_recommendedActionButton);
         return card;
     }
 
@@ -375,57 +381,93 @@ public partial class Form1 : Form
             RowCount = 2,
             BackColor = Color.Transparent
         };
-        split.RowStyles.Add(new RowStyle(SizeType.Absolute, 150F));
+        split.RowStyles.Add(new RowStyle(SizeType.Absolute, 250F));
         split.RowStyles.Add(new RowStyle(SizeType.Percent, 100F));
         card.Controls.Add(split);
 
-        var notesPanel = new TableLayoutPanel
+        var packagePanel = new TableLayoutPanel
         {
             Dock = DockStyle.Fill,
             ColumnCount = 2,
             RowCount = 1,
             BackColor = Color.Transparent
         };
-        notesPanel.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 62F));
-        notesPanel.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 38F));
-        split.Controls.Add(notesPanel, 0, 0);
+        packagePanel.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 72F));
+        packagePanel.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 28F));
+        split.Controls.Add(packagePanel, 0, 0);
 
-        _notesBox = new TextBox
+        var inputCard = new Panel
         {
             Dock = DockStyle.Fill,
+            BackColor = Color.FromArgb(10, 14, 30),
+            Margin = new Padding(0, 0, 10, 10),
+            Padding = new Padding(14)
+        };
+        inputCard.Controls.Add(new Label
+        {
+            Text = "Pegar paquete para Aiko",
+            AutoSize = true,
+            Font = new Font("Segoe UI", 15F, FontStyle.Bold),
+            ForeColor = Color.FromArgb(244, 247, 255),
+            Location = new Point(14, 10)
+        });
+        inputCard.Controls.Add(new Label
+        {
+            Text = "Pega aqui el paquete completo del dia: notas, capturas, videos, diagnostico y borradores base...",
+            AutoSize = false,
+            Size = new Size(620, 24),
+            Font = new Font("Segoe UI", 9.5F),
+            ForeColor = Color.FromArgb(174, 184, 217),
+            Location = new Point(16, 46)
+        });
+        _aikoPackageInputBox = new TextBox
+        {
             Multiline = true,
             ScrollBars = ScrollBars.Vertical,
             AcceptsReturn = true,
             AcceptsTab = true,
             BorderStyle = BorderStyle.FixedSingle,
-            BackColor = Color.FromArgb(10, 14, 30),
+            BackColor = Color.FromArgb(7, 9, 20),
             ForeColor = Color.FromArgb(244, 247, 255),
-            Font = new Font("Consolas", 10F)
+            Font = new Font("Consolas", 10F),
+            Location = new Point(16, 74),
+            Size = new Size(660, 150),
+            Text = ""
         };
-        notesPanel.Controls.Add(_notesBox, 0, 0);
+        inputCard.Controls.Add(_aikoPackageInputBox);
+        packagePanel.Controls.Add(inputCard, 0, 0);
 
-        var statusGrid = new TableLayoutPanel
+        var mainActions = new FlowLayoutPanel
         {
             Dock = DockStyle.Fill,
-            ColumnCount = 2,
-            RowCount = 4,
-            BackColor = Color.Transparent
+            FlowDirection = FlowDirection.TopDown,
+            WrapContents = false,
+            BackColor = Color.Transparent,
+            Padding = new Padding(4, 12, 0, 0)
         };
-        statusGrid.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 50F));
-        statusGrid.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 50F));
-        for (var i = 0; i < 4; i++)
-        {
-            statusGrid.RowStyles.Add(new RowStyle(SizeType.Percent, 25F));
-        }
+        var analyzeButton = MakeButton("Analizar con Aiko", AnalyzeWithAiko, true);
+        analyzeButton.Width = 250;
+        analyzeButton.Height = 64;
+        analyzeButton.Font = new Font("Segoe UI", 13F, FontStyle.Bold);
+        mainActions.Controls.Add(analyzeButton);
 
-        _notesStateLabel = MakeCompactMetricCard(statusGrid, 0, 0, "Notas");
-        _capturesStateLabel = MakeCompactMetricCard(statusGrid, 1, 0, "Capturas");
-        _videosStateLabel = MakeCompactMetricCard(statusGrid, 0, 1, "Videos");
-        _diagnosticStateLabel = MakeCompactMetricCard(statusGrid, 1, 1, "Diagnostico");
-        _aikoPackageStateLabel = MakeCompactMetricCard(statusGrid, 0, 2, "Paquete Aiko");
-        _aikoResponseStateLabel = MakeCompactMetricCard(statusGrid, 1, 2, "Respuesta");
-        _wordpressStateLabel = MakeCompactMetricCard(statusGrid, 0, 3, "WordPress");
-        notesPanel.Controls.Add(statusGrid, 1, 0);
+        var copyButton = MakeButton("Copiar resultado", CopyBestResult);
+        copyButton.Width = 250;
+        copyButton.Height = 48;
+        mainActions.Controls.Add(copyButton);
+
+        var openDayButton = MakeButton("Abrir carpeta del dia", () => OpenFolder(_dayPath));
+        openDayButton.Width = 250;
+        openDayButton.Height = 48;
+        mainActions.Controls.Add(openDayButton);
+
+        var pasteButton = MakeButton("Pegar paquete completo", PastePackageFromClipboard);
+        pasteButton.Width = 250;
+        pasteButton.Height = 42;
+        mainActions.Controls.Add(pasteButton);
+        packagePanel.Controls.Add(mainActions, 1, 0);
+
+        _notesBox = _aikoPackageInputBox;
 
         var previewTabs = new TabControl { Dock = DockStyle.Fill };
         _previewDiagnostic = MakePreviewBox();
@@ -459,27 +501,108 @@ public partial class Form1 : Form
         var card = MakePremiumCard(new Padding(16));
         card.Controls.Add(new Label
         {
-            Text = "Acciones rapidas",
+            Text = "Recomendacion de Aiko",
             AutoSize = true,
             Font = new Font("Segoe UI", 13F, FontStyle.Bold),
-            ForeColor = Color.FromArgb(244, 247, 255),
+            ForeColor = Color.FromArgb(88, 243, 255),
             Location = new Point(16, 10)
         });
 
-        var actions = MakeButtonPanel(new Point(16, 46), new Size(370, 205));
-        actions.Controls.Add(MakeButton("Crear/Cargar dia", () =>
+        _publicationStateLabel = new Label
+        {
+            Text = "Sin material: pega el paquete y pulsa Analizar con Aiko.",
+            AutoSize = false,
+            Size = new Size(370, 44),
+            Font = new Font("Segoe UI", 10F, FontStyle.Bold),
+            ForeColor = Color.FromArgb(255, 209, 102),
+            Location = new Point(18, 44)
+        };
+        card.Controls.Add(_publicationStateLabel);
+
+        _aikoRecommendationDetailLabel = new Label
+        {
+            Text = "Motivo: espera al diagnostico editorial.",
+            AutoSize = false,
+            Size = new Size(370, 34),
+            Font = new Font("Segoe UI", 9F),
+            ForeColor = Color.FromArgb(174, 184, 217),
+            Location = new Point(18, 90)
+        };
+        card.Controls.Add(_aikoRecommendationDetailLabel);
+
+        _nextStepLabel = new Label
+        {
+            Text = "Siguiente paso: pegar paquete y analizar.",
+            AutoSize = false,
+            Size = new Size(370, 34),
+            Font = new Font("Segoe UI", 9F, FontStyle.Bold),
+            ForeColor = Color.FromArgb(255, 79, 216),
+            Location = new Point(18, 126)
+        };
+        card.Controls.Add(_nextStepLabel);
+
+        _recommendedActionButton = MakeButton("Analizar con Aiko", ExecuteRecommendedAction, true);
+        _recommendedActionButton.Width = 245;
+        _recommendedActionButton.Height = 42;
+        _recommendedActionButton.Location = new Point(18, 164);
+        card.Controls.Add(_recommendedActionButton);
+
+        card.Controls.Add(new Label
+        {
+            Text = "Estado hoy",
+            AutoSize = true,
+            Font = new Font("Segoe UI", 11F, FontStyle.Bold),
+            ForeColor = Color.FromArgb(244, 247, 255),
+            Location = new Point(16, 218)
+        });
+
+        var statusGrid = new TableLayoutPanel
+        {
+            Location = new Point(14, 246),
+            Size = new Size(370, 124),
+            ColumnCount = 2,
+            RowCount = 4,
+            BackColor = Color.Transparent
+        };
+        statusGrid.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 50F));
+        statusGrid.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 50F));
+        for (var i = 0; i < 4; i++)
+        {
+            statusGrid.RowStyles.Add(new RowStyle(SizeType.Percent, 25F));
+        }
+
+        _notesStateLabel = MakeCompactMetricCard(statusGrid, 0, 0, "Paquete");
+        _capturesStateLabel = MakeCompactMetricCard(statusGrid, 1, 0, "Capturas");
+        _videosStateLabel = MakeCompactMetricCard(statusGrid, 0, 1, "Videos");
+        _diagnosticStateLabel = MakeCompactMetricCard(statusGrid, 1, 1, "Analisis");
+        _aikoPackageStateLabel = MakeCompactMetricCard(statusGrid, 0, 2, "Base Aiko");
+        _aikoResponseStateLabel = MakeCompactMetricCard(statusGrid, 1, 2, "Resultado");
+        _wordpressStateLabel = MakeCompactMetricCard(statusGrid, 0, 3, "WordPress");
+        card.Controls.Add(statusGrid);
+
+        card.Controls.Add(new Label
+        {
+            Text = "Herramientas avanzadas",
+            AutoSize = true,
+            Font = new Font("Segoe UI", 11F, FontStyle.Bold),
+            ForeColor = Color.FromArgb(255, 79, 216),
+            Location = new Point(16, 386)
+        });
+
+        var actions = MakeButtonPanel(new Point(16, 414), new Size(370, 145));
+        actions.Controls.Add(MakeButton("Nuevo dia", () =>
         {
             EnsureDay(_currentDay);
             RefreshAssetsList();
             SetStatus("Dia creado correctamente.");
-        }, true));
+        }));
         actions.Controls.Add(MakeButton("Importar capturas", ImportCaptures));
         actions.Controls.Add(MakeButton("Importar videos", ImportVideos));
         actions.Controls.Add(MakeButton("Guardar nota", SaveNotes));
-        actions.Controls.Add(MakeButton("Preparar contenido base", PrepareContent));
-        actions.Controls.Add(MakeButton("Content Bank", GenerateContentBankIdeas));
-        actions.Controls.Add(MakeButton("Borrador manual", OpenManualWordPressDraft));
-        actions.Controls.Add(MakeButton("Marcar publicado", MarkAsPublished));
+        actions.Controls.Add(MakeButton("Generar paquete base", PrepareContent));
+        actions.Controls.Add(MakeButton("Banco de ideas", GenerateContentBankIdeas));
+        actions.Controls.Add(MakeButton("Escribir manualmente", OpenManualWordPressDraft));
+        actions.Controls.Add(MakeButton("Marcar como publicado", MarkAsPublished));
         card.Controls.Add(actions);
 
         card.Controls.Add(new Label
@@ -488,24 +611,24 @@ public partial class Form1 : Form
             AutoSize = true,
             Font = new Font("Segoe UI", 12F, FontStyle.Bold),
             ForeColor = Color.FromArgb(255, 79, 216),
-            Location = new Point(16, 268)
+            Location = new Point(16, 574)
         });
 
         card.Controls.Add(new Label
         {
-            Text = "- Capturar material claro\n- Organizar notas antes de redactar\n- Pedir contexto si algo no esta claro\n- Revisar manualmente antes de publicar",
+            Text = "- Pegar paquete completo\n- Analizar con Aiko\n- Revisar resultado\n- Copiar o publicar manualmente",
             AutoSize = false,
             Size = new Size(370, 110),
             Font = new Font("Segoe UI", 9.5F),
             ForeColor = Color.FromArgb(174, 184, 217),
-            Location = new Point(18, 302)
+            Location = new Point(18, 608)
         });
 
-        var utility = MakeButtonPanel(new Point(16, 420), new Size(370, 120));
-        utility.Controls.Add(MakeButton("Abrir salida", () => OpenFolder(Path.Combine(_dayPath, "Salida"))));
-        utility.Controls.Add(MakeButton("Abrir carpeta dia", () => OpenFolder(_dayPath)));
-        utility.Controls.Add(MakeButton("Abrir Content Bank", OpenContentBankFolder));
-        utility.Controls.Add(MakeButton("Copiar entrada web", () => CopyOutput("entrada_web.md")));
+        var utility = MakeButtonPanel(new Point(16, 704), new Size(370, 100));
+        utility.Controls.Add(MakeButton("Abrir resultado", () => OpenFolder(Path.Combine(_dayPath, "Salida"))));
+        utility.Controls.Add(MakeButton("Abrir carpeta del dia", () => OpenFolder(_dayPath)));
+        utility.Controls.Add(MakeButton("Abrir Banco de ideas", OpenContentBankFolder));
+        utility.Controls.Add(MakeButton("Copiar devlog web", () => CopyOutput("entrada_web.md")));
         utility.Controls.Add(MakeButton("Copiar Discord", () => CopyOutput("post_discord.md")));
         utility.Controls.Add(MakeButton("Copiar X", () => CopyOutput("post_x.md")));
         card.Controls.Add(utility);
@@ -1976,6 +2099,95 @@ public partial class Form1 : Form
         SetStatus("Material analizado. Recomendación: " + ToTitle(diagnostic.RecommendedType) + ".");
     }
 
+    private void PastePackageFromClipboard()
+    {
+        if (Clipboard.ContainsText())
+        {
+            _aikoPackageInputBox.Text = Clipboard.GetText();
+            _notesBox.Text = _aikoPackageInputBox.Text;
+            SetStatus("Paquete completo pegado. Pulsa Analizar con Aiko.");
+            return;
+        }
+
+        SetStatus("No hay texto en el portapapeles para pegar.");
+    }
+
+    private void AnalyzeWithAiko()
+    {
+        EnsureDay(_currentDay);
+
+        if (!string.IsNullOrWhiteSpace(_aikoPackageInputBox.Text))
+        {
+            _notesBox.Text = _aikoPackageInputBox.Text;
+        }
+
+        SaveNotes();
+
+        var output = Path.Combine(_dayPath, "Salida");
+        Directory.CreateDirectory(output);
+        WriteOrganizedNotes(output);
+        var diagnostic = WriteEditorialOutputs(output);
+        SetRecommendation(diagnostic.RecommendedType);
+        LoadPreviews();
+        SetStatus("Analisis de Aiko preparado. Revisa la recomendacion y copia el resultado cuando este listo.");
+    }
+
+    private void ExecuteRecommendedAction()
+    {
+        var recommendation = GetCurrentRecommendationKey();
+        switch (recommendation)
+        {
+            case "devlog completo":
+            case "mini devlog":
+                PrepareContent();
+                SetStatus("Devlog web generado como borrador base. Revisalo antes de usarlo.");
+                break;
+            case "solo redes":
+                PrepareContent();
+                CopyBestResult();
+                break;
+            case "idea para vÃ­deo":
+            case "idea para video":
+                GenerateContentBankIdeas();
+                SetStatus("Idea de video preparada en Banco de ideas.");
+                break;
+            default:
+                AnalyzeWithAiko();
+                break;
+        }
+    }
+
+    private void CopyBestResult()
+    {
+        var output = Path.Combine(_dayPath, "Salida");
+        var candidates = new[]
+        {
+            Path.Combine(output, "respuesta_aiko.md"),
+            Path.Combine(output, "entrada_web.md"),
+            Path.Combine(output, "post_discord.md"),
+            Path.Combine(output, "paquete_para_aiko.md"),
+            Path.Combine(output, "diagnostico_editorial.md")
+        };
+
+        var best = candidates.FirstOrDefault(File.Exists);
+        if (best is null)
+        {
+            SetStatus("Todavia no hay resultado para copiar. Pulsa Analizar con Aiko primero.");
+            return;
+        }
+
+        TryCopyToClipboard(File.ReadAllText(best, Encoding.UTF8), "Resultado copiado: " + Path.GetFileName(best));
+    }
+
+    private string GetCurrentRecommendationKey()
+    {
+        return _recommendationLabel.Text
+            .Replace("RecomendaciÃ³n:", "", StringComparison.OrdinalIgnoreCase)
+            .Replace("Recomendacion:", "", StringComparison.OrdinalIgnoreCase)
+            .Trim()
+            .ToLowerInvariant();
+    }
+
     private void GenerateContentBankIdeas()
     {
         EnsureDay(_currentDay);
@@ -2660,6 +2872,17 @@ public partial class Form1 : Form
                 "nota interna" => "Siguiente paso: completar notas antes de publicar.",
                 "no publicar todavÃ­a" or "no publicar todavia" => "Siguiente paso: guardar como interno y pedir contexto.",
                 _ => "Siguiente paso: guardar notas y analizar material."
+            };
+        }
+
+        if (_recommendedActionButton is not null)
+        {
+            _recommendedActionButton.Text = recommendation switch
+            {
+                "devlog completo" or "mini devlog" => "Generar devlog web",
+                "solo redes" => "Generar posts",
+                "idea para vÃ­deo" or "idea para video" => "Crear idea de video",
+                _ => "Analizar con Aiko"
             };
         }
     }
@@ -3362,7 +3585,7 @@ public partial class Form1 : Form
 
     private void LoadPreviews()
     {
-        _previewDiagnostic.Text = ReadOutputOrPlaceholder("diagnostico_editorial.md");
+        _previewDiagnostic.Text = BuildFriendlyDiagnosticPreview();
         _previewOrganizedNotes.Text = ReadOutputOrPlaceholder("notas_organizadas.md");
         _previewWeb.Text = ReadOutputOrPlaceholder("entrada_web.md");
         _previewDiscord.Text = ReadOutputOrPlaceholder("post_discord.md");
@@ -3391,6 +3614,30 @@ public partial class Form1 : Form
         }
 
         return "Todavia no hay borrador WordPress. Cuando se cree, siempre sera en estado draft o como borrador manual.";
+    }
+
+    private string BuildFriendlyDiagnosticPreview()
+    {
+        var diagnostic = CreateEditorialDiagnostic();
+        return $"""
+        RESUMEN DEL DIA
+        {diagnostic.Summary}
+
+        MATERIAL DETECTADO
+        - Notas: {diagnostic.NoteCount}
+        - Capturas: {diagnostic.CaptureCount}
+        - Videos: {diagnostic.VideoCount}
+        - Nivel de informacion: {diagnostic.InformationLevel}
+
+        RECOMENDACION
+        {ToTitle(diagnostic.RecommendedType)}
+
+        MOTIVO
+        {diagnostic.Reason}
+
+        QUE FALTA ANTES DE PUBLICAR
+        {diagnostic.MissingForStrongWebEntry}
+        """.Trim();
     }
 
     private string ReadOutputOrPlaceholder(string fileName)
