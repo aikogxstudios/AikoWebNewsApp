@@ -164,7 +164,8 @@ public partial class Form1 : Form
         {
             Dock = DockStyle.Fill,
             BackColor = Color.FromArgb(12, 15, 31),
-            Padding = new Padding(14)
+            Padding = new Padding(14),
+            AutoScroll = true
         };
 
         sidebar.Controls.Add(new Label
@@ -191,7 +192,8 @@ public partial class Form1 : Form
             Size = new Size(220, 456),
             FlowDirection = FlowDirection.TopDown,
             WrapContents = false,
-            BackColor = Color.Transparent
+            BackColor = Color.Transparent,
+            AutoScroll = true
         };
 
         foreach (var item in new[]
@@ -289,10 +291,9 @@ public partial class Form1 : Form
         };
         header.Controls.Add(today);
 
-        header.Controls.Add(MakeHeaderButton("🔔", new Point(900, 22), () => SetStatus("Notificaciones: no hay avisos nuevos.")));
-        header.Controls.Add(MakeHeaderButton("?", new Point(950, 22), () => SetStatus("Ayuda: pega el paquete, analiza y revisa antes de publicar.")));
-        header.Controls.Add(MakeHeaderButton("⚙", new Point(1000, 22), () => NavigateSidebar("Ajustes")));
-        header.Controls.Add(MakeHeaderChip("Modo oscuro", new Point(1050, 24), Color.FromArgb(138, 77, 255)));
+        header.Controls.Add(MakeHeaderButton("Avisos", new Point(880, 22), () => SetStatus("Notificaciones: no hay avisos nuevos.")));
+        header.Controls.Add(MakeHeaderButton("Ayuda", new Point(952, 22), ShowUsageGuide));
+        header.Controls.Add(MakeHeaderButton("Ajustes", new Point(1024, 22), () => NavigateSidebar("Ajustes")));
         return header;
     }
 
@@ -353,11 +354,11 @@ public partial class Form1 : Form
             WrapContents = false,
             BackColor = Color.Transparent
         };
-        flow.Controls.Add(MakeFlowStep("1", "Capturar", "Notas y material", SaveNotes));
-        flow.Controls.Add(MakeFlowStep("2", "Organizar", "Separar contexto", OrganizeDeveloperNotes));
-        flow.Controls.Add(MakeFlowStep("3", "Recomendar", "Aiko decide formato", AnalyzeWithAiko, true));
-        flow.Controls.Add(MakeFlowStep("4", "Crear contenido", "Paquete o borrador", GenerateAikoPackage));
-        flow.Controls.Add(MakeFlowStep("5", "Publicar / revisar", "Manual y seguro", OpenManualWordPressDraft));
+        flow.Controls.Add(MakeFlowStep("1", "Capturar", "Notas/material", SaveNotes));
+        flow.Controls.Add(MakeFlowStep("2", "Organizar", "Contexto", OrganizeDeveloperNotes));
+        flow.Controls.Add(MakeFlowStep("3", "Recomendar", "Formato", AnalyzeWithAiko, true));
+        flow.Controls.Add(MakeFlowStep("4", "Crear", "Borrador", GenerateAikoPackage));
+        flow.Controls.Add(MakeFlowStep("5", "Revisar", "Manual seguro", OpenManualWordPressDraft));
         card.Controls.Add(flow);
         return card;
     }
@@ -367,7 +368,7 @@ public partial class Form1 : Form
         var card = MakePremiumCard(new Padding(16));
         card.Controls.Add(new Label
         {
-            Text = "✦ Recomendacion de Aiko",
+            Text = "Recomendacion de Aiko",
             AutoSize = true,
             Font = new Font("Segoe UI", 13F, FontStyle.Bold),
             ForeColor = Color.FromArgb(88, 243, 255),
@@ -458,11 +459,9 @@ public partial class Form1 : Form
     {
         var card = MakePremiumCard(new Padding(14));
         card.Controls.Add(new Label { Text = "Progreso semanal", AutoSize = true, Font = new Font("Segoe UI", 12F, FontStyle.Bold), ForeColor = Color.FromArgb(244, 247, 255), Location = new Point(14, 10) });
-        var progress = MakeCircularProgressPanel(0, 2);
-        progress.Location = new Point(16, 42);
-        card.Controls.Add(progress);
-        card.Controls.Add(new Label { Text = "Objetivo: 2 videos\n0/2 completados\nPequeño avance, paso firme.", AutoSize = false, Size = new Size(185, 78), Font = new Font("Segoe UI", 9F, FontStyle.Bold), ForeColor = Color.FromArgb(174, 184, 217), Location = new Point(118, 48) });
-        card.Controls.Add(new Label { Text = "L  M  X  J  V  S  D\n○  ○  ○  ○  ○  ○  ○", AutoSize = true, Font = new Font("Consolas", 10F, FontStyle.Bold), ForeColor = Color.FromArgb(98, 255, 180), Location = new Point(18, 122) });
+        card.Controls.Add(new Label { Text = "0/2 videos esta semana", AutoSize = false, Size = new Size(300, 30), Font = new Font("Segoe UI", 14F, FontStyle.Bold), ForeColor = Color.FromArgb(88, 243, 255), Location = new Point(16, 44) });
+        card.Controls.Add(new Label { Text = "Objetivo simple, sin datos automaticos todavia.", AutoSize = false, Size = new Size(300, 26), Font = new Font("Segoe UI", 9F), ForeColor = Color.FromArgb(174, 184, 217), Location = new Point(18, 78) });
+        card.Controls.Add(new Label { Text = "Siguiente paso: generar una idea de video o importar un clip.", AutoSize = false, Size = new Size(300, 44), Font = new Font("Segoe UI", 9F, FontStyle.Bold), ForeColor = Color.FromArgb(255, 209, 102), Location = new Point(18, 106) });
         return card;
     }
 
@@ -470,10 +469,8 @@ public partial class Form1 : Form
     {
         var card = MakePremiumCard(new Padding(14));
         card.Controls.Add(new Label { Text = "Distribucion de contenido", AutoSize = true, Font = new Font("Segoe UI", 12F, FontStyle.Bold), ForeColor = Color.FromArgb(244, 247, 255), Location = new Point(14, 10) });
-        var donut = MakeDonutChartPanel();
-        donut.Location = new Point(16, 42);
-        card.Controls.Add(donut);
-        card.Controls.Add(new Label { Text = "■ TikTok / Shorts 35%\n■ Discord 25%\n■ Devlog 20%\n■ X 15%\n■ itch.io 5%", AutoSize = false, Size = new Size(190, 105), Font = new Font("Segoe UI", 8.5F, FontStyle.Bold), ForeColor = Color.FromArgb(174, 184, 217), Location = new Point(138, 44) });
+        card.Controls.Add(new Label { Text = "Sin datos suficientes", AutoSize = false, Size = new Size(310, 34), Font = new Font("Segoe UI", 14F, FontStyle.Bold), ForeColor = Color.FromArgb(255, 209, 102), Location = new Point(16, 44) });
+        card.Controls.Add(new Label { Text = "La app no muestra porcentajes inventados. Marca publicaciones o genera Content Bank para revisar patrones reales.", AutoSize = false, Size = new Size(310, 70), Font = new Font("Segoe UI", 9F), ForeColor = Color.FromArgb(174, 184, 217), Location = new Point(18, 82) });
         return card;
     }
 
@@ -481,14 +478,18 @@ public partial class Form1 : Form
     {
         var card = MakePremiumCard(new Padding(14));
         card.Controls.Add(new Label { Text = "Material util", AutoSize = true, Font = new Font("Segoe UI", 12F, FontStyle.Bold), ForeColor = Color.FromArgb(244, 247, 255), Location = new Point(14, 10) });
-        var grid = new TableLayoutPanel { Location = new Point(12, 42), Size = new Size(330, 92), ColumnCount = 2, RowCount = 2, BackColor = Color.Transparent };
+        var grid = new TableLayoutPanel { Location = new Point(12, 42), Size = new Size(330, 58), ColumnCount = 2, RowCount = 1, BackColor = Color.Transparent };
         grid.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 50F));
         grid.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 50F));
-        grid.RowStyles.Add(new RowStyle(SizeType.Percent, 50F));
-        grid.RowStyles.Add(new RowStyle(SizeType.Percent, 50F));
+        grid.RowStyles.Add(new RowStyle(SizeType.Percent, 100F));
         _capturesStateLabel = MakeCompactMetricCard(grid, 0, 0, "Capturas");
         _videosStateLabel = MakeCompactMetricCard(grid, 1, 0, "Videos");
         card.Controls.Add(grid);
+        var openMaterial = MakeButton("Abrir carpeta de material", () => OpenFolder(_dayPath));
+        openMaterial.Width = 210;
+        openMaterial.Height = 34;
+        openMaterial.Location = new Point(16, 106);
+        card.Controls.Add(openMaterial);
         return card;
     }
 
@@ -498,6 +499,7 @@ public partial class Form1 : Form
         card.AutoScroll = true;
         card.Controls.Add(new Label { Text = "Acciones rapidas", AutoSize = true, Font = new Font("Segoe UI", 13F, FontStyle.Bold), ForeColor = Color.FromArgb(244, 247, 255), Location = new Point(16, 10) });
         var actions = MakeButtonPanel(new Point(16, 44), new Size(350, 150));
+        actions.AutoScroll = true;
         actions.Controls.Add(MakeButton("Nueva nota", SaveNotes, true));
         actions.Controls.Add(MakeButton("Nuevo devlog", PrepareContent));
         actions.Controls.Add(MakeButton("Nueva idea", GenerateContentBankIdeas));
@@ -517,7 +519,7 @@ public partial class Form1 : Form
     {
         var card = MakePremiumCard(new Padding(16));
         card.Controls.Add(new Label { Text = "Pegar paquete para Aiko", AutoSize = true, Font = new Font("Segoe UI", 13F, FontStyle.Bold), ForeColor = Color.FromArgb(244, 247, 255), Location = new Point(16, 10) });
-        card.Controls.Add(new Label { Text = "Pega aqui el paquete completo del dia: notas, capturas, videos, diagnostico y borradores base.", AutoSize = false, Size = new Size(620, 24), Font = new Font("Segoe UI", 9.5F), ForeColor = Color.FromArgb(174, 184, 217), Location = new Point(18, 42) });
+        card.Controls.Add(new Label { Text = "Empieza aqui: pega tus notas del dia y pulsa Analizar con Aiko.", AutoSize = false, Size = new Size(620, 24), Font = new Font("Segoe UI", 9.5F), ForeColor = Color.FromArgb(174, 184, 217), Location = new Point(18, 42) });
         _aikoPackageInputBox = new TextBox { Multiline = true, ScrollBars = ScrollBars.Vertical, AcceptsReturn = true, AcceptsTab = true, BorderStyle = BorderStyle.FixedSingle, BackColor = Color.FromArgb(7, 9, 20), ForeColor = Color.FromArgb(244, 247, 255), Font = new Font("Consolas", 10F), Location = new Point(18, 70), Size = new Size(500, 130) };
         _notesBox = _aikoPackageInputBox;
         card.Controls.Add(_aikoPackageInputBox);
@@ -565,11 +567,30 @@ public partial class Form1 : Form
     private Button MakeHeaderButton(string text, Point location, Action action)
     {
         var button = MakeButton(text, action);
-        button.Width = 40;
+        button.Width = text.Length > 2 ? 68 : 40;
         button.Height = 34;
         button.Location = location;
-        button.Font = new Font("Segoe UI", 12F, FontStyle.Bold);
+        button.Font = new Font("Segoe UI", 9F, FontStyle.Bold);
         return button;
+    }
+
+    private void ShowUsageGuide()
+    {
+        const string guide = """
+        Guia rapida de Aiko Web News App
+
+        1. Escribe o pega notas del dia.
+        2. Importa capturas o videos si tienes material visual.
+        3. Pulsa Analizar con Aiko.
+        4. Revisa la Recomendacion de Aiko.
+        5. Si falta contexto, completa la nota antes de publicar.
+        6. Genera paquete para Aiko o Content Bank.
+        7. Revisa resultados.
+        8. Copia manualmente o crea borrador WordPress en draft.
+        """;
+
+        MessageBox.Show(guide, "Ayuda", MessageBoxButtons.OK, MessageBoxIcon.Information);
+        SetStatus("Guia abierta. Empieza pegando tus notas del dia y pulsa Analizar con Aiko.");
     }
 
     private Panel MakeCircularProgressPanel(int value, int goal)
@@ -1821,10 +1842,10 @@ public partial class Form1 : Form
     private Button MakeFlowStep(string number, string title, string description, Action action, bool primary = false)
     {
         var button = MakeButton(number + ". " + title + Environment.NewLine + description, action, primary);
-        button.Width = 164;
-        button.Height = 72;
+        button.Width = 110;
+        button.Height = 58;
         button.TextAlign = ContentAlignment.MiddleLeft;
-        button.Font = new Font("Segoe UI", 9F, FontStyle.Bold);
+        button.Font = new Font("Segoe UI", 8F, FontStyle.Bold);
         return button;
     }
 
@@ -2740,7 +2761,7 @@ public partial class Form1 : Form
                 PrepareContent();
                 CopyBestResult();
                 break;
-            case "idea para vÃ­deo":
+            case "idea para vídeo":
             case "idea para video":
                 GenerateContentBankIdeas();
                 SetStatus("Idea de video preparada en Banco de ideas.");
@@ -2776,7 +2797,7 @@ public partial class Form1 : Form
     private string GetCurrentRecommendationKey()
     {
         return _recommendationLabel.Text
-            .Replace("RecomendaciÃ³n:", "", StringComparison.OrdinalIgnoreCase)
+            .Replace("Recomendación:", "", StringComparison.OrdinalIgnoreCase)
             .Replace("Recomendacion:", "", StringComparison.OrdinalIgnoreCase)
             .Trim()
             .ToLowerInvariant();
@@ -3391,7 +3412,7 @@ public partial class Form1 : Form
 
     private void SetRecommendation(string recommendedType)
     {
-        _recommendationLabel.Text = "Recomendación: " + ToTitle(recommendedType);
+        _recommendationLabel.Text = "Recomendacion: " + ToTitle(recommendedType);
     }
 
     private void UpdateDashboardStatus()
@@ -3418,19 +3439,15 @@ public partial class Form1 : Form
         SetMetricState(_aikoResponseStateLabel, responseReady ? "Listo" : "Pendiente", responseReady);
         SetMetricState(_wordpressStateLabel, wordpressReady ? "Draft listo" : "Pendiente", wordpressReady);
 
-        var recommendation = _recommendationLabel.Text
-            .Replace("RecomendaciÃ³n:", "", StringComparison.OrdinalIgnoreCase)
-            .Replace("Recomendacion:", "", StringComparison.OrdinalIgnoreCase)
-            .Trim()
-            .ToLowerInvariant();
+        var recommendation = GetCurrentRecommendationKey();
 
         var publication = recommendation switch
         {
-            "" or "pendiente de diagnostico editorial" or "pendiente de diagnÃ³stico editorial" => "Sin material: guarda notas y analiza antes de publicar.",
-            "no publicar todavÃ­a" or "no publicar todavia" => "No publicar todavia: falta contexto o hay riesgo editorial.",
+            "" or "pendiente de diagnostico editorial" or "pendiente de diagnóstico editorial" => "Sin material: guarda notas y analiza antes de publicar.",
+            "no publicar todavía" or "no publicar todavia" => "No publicar todavia: falta contexto o hay riesgo editorial.",
             "nota interna" => "Necesita contexto: mejor nota interna antes de crear contenido publico.",
             "solo redes" => "Listo para redes: Discord/X primero, WordPress no es accion principal.",
-            "idea para vÃ­deo" or "idea para video" => "Listo para pieza visual: prepara clip o captura antes de publicar.",
+            "idea para vídeo" or "idea para video" => "Listo para pieza visual: prepara clip o captura antes de publicar.",
             "mini devlog" => "Listo para mini update: revisar contexto antes de web.",
             "devlog completo" => "Listo para devlog web: se puede preparar borrador WordPress en draft.",
             _ => "Revisa diagnostico: la app recomienda " + recommendation + "."
@@ -3446,11 +3463,11 @@ public partial class Form1 : Form
             _aikoRecommendationDetailLabel.Text = recommendation switch
             {
                 "solo redes" => "Motivo: el material funciona mejor como update corto.",
-                "idea para vÃ­deo" or "idea para video" => "Motivo: hay potencial visual, pero conviene preparar clip.",
+                "idea para vídeo" or "idea para video" => "Motivo: hay potencial visual, pero conviene preparar clip.",
                 "mini devlog" => "Motivo: hay algo aprovechable, aunque falta contexto para pieza grande.",
                 "devlog completo" => "Motivo: hay base suficiente para revisar una entrada web.",
                 "nota interna" => "Motivo: la nota todavia necesita contexto editorial.",
-                "no publicar todavÃ­a" or "no publicar todavia" => "Motivo: publicar ahora podria forzar o inventar.",
+                "no publicar todavía" or "no publicar todavia" => "Motivo: publicar ahora podria forzar o inventar.",
                 _ => "Motivo: espera al diagnostico editorial."
             };
         }
@@ -3460,11 +3477,11 @@ public partial class Form1 : Form
             _nextStepLabel.Text = recommendation switch
             {
                 "solo redes" => "Siguiente paso: preparar Discord/X o Content Bank.",
-                "idea para vÃ­deo" or "idea para video" => "Siguiente paso: grabar clip o elegir captura.",
+                "idea para vídeo" or "idea para video" => "Siguiente paso: grabar clip o elegir captura.",
                 "mini devlog" => "Siguiente paso: pedir contexto y revisar Aiko.",
                 "devlog completo" => "Siguiente paso: paquete Aiko y borrador WordPress draft.",
                 "nota interna" => "Siguiente paso: completar notas antes de publicar.",
-                "no publicar todavÃ­a" or "no publicar todavia" => "Siguiente paso: guardar como interno y pedir contexto.",
+                "no publicar todavía" or "no publicar todavia" => "Siguiente paso: guardar como interno y pedir contexto.",
                 _ => "Siguiente paso: guardar notas y analizar material."
             };
         }
@@ -3475,7 +3492,7 @@ public partial class Form1 : Form
             {
                 "devlog completo" or "mini devlog" => "Generar devlog web",
                 "solo redes" => "Generar posts",
-                "idea para vÃ­deo" or "idea para video" => "Crear idea de video",
+                "idea para vídeo" or "idea para video" => "Crear idea de video",
                 _ => "Analizar con Aiko"
             };
         }
