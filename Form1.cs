@@ -238,6 +238,7 @@ public partial class Form1 : Form
         }));
         importButtons.Controls.Add(MakeButton("Importar capturas", ImportCaptures));
         importButtons.Controls.Add(MakeButton("Importar vídeos", ImportVideos));
+        importButtons.Controls.Add(MakeButton("Organizar notas", OrganizeDeveloperNotes));
         importButtons.Controls.Add(MakeButton("Analizar material", AnalyzeMaterial));
         importButtons.Controls.Add(MakeButton("Preparar contenido", PrepareContent, true));
         importButtons.Controls.Add(MakeButton("Generar paquete para Aiko", GenerateAikoPackage, true));
@@ -543,6 +544,7 @@ public partial class Form1 : Form
 
         var output = Path.Combine(_dayPath, "Salida");
         Directory.CreateDirectory(output);
+        WriteOrganizedNotes(output);
 
         var notes = _notesBox.Text.Trim();
         if (string.IsNullOrWhiteSpace(notes))
@@ -582,6 +584,7 @@ public partial class Form1 : Form
 
         var output = Path.Combine(_dayPath, "Salida");
         Directory.CreateDirectory(output);
+        WriteOrganizedNotes(output);
 
         var diagnostic = WriteEditorialOutputs(output);
         var package = BuildAikoPackage();
@@ -600,6 +603,7 @@ public partial class Form1 : Form
         var existingOutputs = ReadExistingOutputFiles();
         var diagnosticPath = GetEditorialDiagnosticPath();
         var diagnostic = File.Exists(diagnosticPath) ? File.ReadAllText(diagnosticPath, Encoding.UTF8).Trim() : BuildEditorialDiagnosticMarkdown(CreateEditorialDiagnostic());
+        var organizedNotes = ReadOutputFileForPackage("notas_organizadas.md", "Todavía no hay notas organizadas generadas.");
         var titles = ReadOutputFileForPackage("titulos_y_descripciones.md", "Todavía no hay títulos y descripciones generados.");
         var publicationRecommendations = ReadOutputFileForPackage("recomendaciones_publicacion.md", "Todavía no hay recomendaciones de publicación generadas.");
 
@@ -613,6 +617,10 @@ public partial class Form1 : Form
         ## Notas del día
 
         {notes}
+
+        ## Notas organizadas del desarrollador
+
+        {organizedNotes}
 
         ## Capturas disponibles
 
@@ -664,6 +672,7 @@ public partial class Form1 : Form
         No digas que algo está terminado si solo está en prueba.
         Evita spoilers fuertes del lore.
         Usa solo la información del material del día.
+        Estas notas ya han sido organizadas. Usa solo los avances reales y el material con contexto. No conviertas notas confusas en afirmaciones públicas.
         Si falta información, haz una versión prudente y pide qué dato falta.
         El contenido debe quedar listo para revisar y publicar manualmente.
         Aprovecha lo más fuerte del material.
@@ -738,12 +747,237 @@ public partial class Form1 : Form
         return File.Exists(path) ? File.ReadAllText(path, Encoding.UTF8).Trim() : fallback;
     }
 
+    private void OrganizeDeveloperNotes()
+    {
+        EnsureDay(_currentDay);
+        SaveNotes();
+        var output = Path.Combine(_dayPath, "Salida");
+        Directory.CreateDirectory(output);
+        WriteOrganizedNotes(output);
+        SetStatus("Notas organizadas correctamente.");
+    }
+
+    private void WriteOrganizedNotes(string output)
+    {
+        var noteContents = ReadNoteContents();
+        var captures = GetFiles("Capturas").Select(Path.GetFileName).Where(x => x is not null).Cast<string>().ToList();
+        var videos = GetFiles("Videos").Select(Path.GetFileName).Where(x => x is not null).Cast<string>().ToList();
+        var diagnostic = CreateEditorialDiagnostic();
+        var organized = BuildOrganizedNotesMarkdown(noteContents, captures, videos, diagnostic);
+        File.WriteAllText(Path.Combine(output, "notas_organizadas.md"), organized, Encoding.UTF8);
+    }
+
+    private string BuildOrganizedNotesMarkdown(List<string> noteContents, List<string> captures, List<string> videos, EditorialDiagnostic diagnostic)
+    {
+        var fragments = SplitDeveloperNoteFragments(noteContents);
+        var advances = new List<string>();
+        var visual = new List<string>();
+        var bugs = new List<string>();
+        var future = new List<string>();
+        var unclear = new List<string>();
+        var shortPosts = new List<string>();
+
+        foreach (var fragment in fragments)
+        {
+            var normalized = fragment.ToLowerInvariant();
+            var hasContext = HasEnoughContext(fragment);
+            var isBug = ContainsAny(normalized, ["bug", "error", "fallo", "problema", "raro", "rara", "rompe", "crash", "no funciona", "prueba", "test"]);
+            var isFuture = ContainsAny(normalized, ["pendiente", "futuro", "idea", "roadmap", "meter", "añadir", "agregar", "no se si", "no sé si", "quizá", "quiza", "luego"]);
+            var isVisual = ContainsAny(normalized, ["captura", "video", "vídeo", "visual", "nube", "nubes", "limon", "limón", "gigante", "ui", "color", "escena", "zona"]);
+            var isPublicableAdvance = ContainsAny(normalized, ["disponible", "implementado", "creado", "añadido", "agregado", "mejorado", "ajustado", "trabajado", "evento", "cartas", "nexo", "abismo", "aguja"]);
+            var isShortPost = ContainsAny(normalized, ["limon", "limón", "gigante", "nube", "nubes", "raro", "rara", "curioso", "broma", "caos"]);
+
+            if (isBug)
+            {
+                bugs.Add(CleanFragment(fragment));
+            }
+
+            if (isFuture)
+            {
+                future.Add(CleanFragment(fragment));
+            }
+
+            if (isVisual)
+            {
+                visual.Add(CleanFragment(fragment));
+            }
+
+            if (isPublicableAdvance && hasContext && !isBug && !isFuture)
+            {
+                advances.Add(CleanFragment(fragment));
+            }
+            else if (!hasContext || (!isBug && !isFuture && !isVisual && !isPublicableAdvance))
+            {
+                unclear.Add(CleanFragment(fragment) + " (requiere contexto)");
+            }
+
+            if (isShortPost && !isBug)
+            {
+                shortPosts.Add(CleanFragment(fragment));
+            }
+        }
+
+        foreach (var capture in captures)
+        {
+            visual.Add("Captura disponible: " + capture);
+        }
+
+        foreach (var video in videos)
+        {
+            visual.Add("Vídeo disponible: " + video);
+        }
+
+        var summary = BuildCleanDaySummary(advances, visual, bugs, future, unclear, diagnostic);
+
+        return $"""
+        # Notas organizadas del desarrollador
+
+        ## Resumen limpio del día
+
+        {summary}
+
+        ## Avances reales detectados
+
+        {FormatMarkdownList(advances, "No hay avances publicables claros todavía.")}
+
+        ## Material visual o destacable
+
+        {FormatMarkdownList(visual, "No hay material visual o destacable detectado.")}
+
+        ## Bugs, pruebas o problemas
+
+        {FormatMarkdownList(bugs, "No se detectaron bugs, pruebas o problemas claros.")}
+
+        ## Ideas futuras o pendientes
+
+        {FormatMarkdownList(future, "No se detectaron ideas futuras o pendientes claras.")}
+
+        ## Notas confusas o con poco contexto
+
+        {FormatMarkdownList(unclear, "No se detectaron notas confusas relevantes.")}
+
+        ## Posibles posts cortos
+
+        {FormatMarkdownList(shortPosts, "No hay ideas claras para posts cortos todavía.")}
+
+        ## Recomendación editorial
+
+        {BuildDeveloperNotesRecommendation(diagnostic, advances, visual, bugs, future, unclear)}
+        """.Trim() + Environment.NewLine;
+    }
+
+    private static List<string> SplitDeveloperNoteFragments(List<string> noteContents)
+    {
+        var fragments = new List<string>();
+        foreach (var note in noteContents)
+        {
+            var pieces = note
+                .Split(['\r', '\n', '.', ';', '•'], StringSplitOptions.RemoveEmptyEntries)
+                .Select(piece => piece.Trim('-', '*', ' ', '\t'))
+                .Where(piece => !string.IsNullOrWhiteSpace(piece));
+
+            fragments.AddRange(pieces);
+        }
+
+        return fragments;
+    }
+
+    private static bool HasEnoughContext(string fragment)
+    {
+        var words = fragment.Split([' ', '\t'], StringSplitOptions.RemoveEmptyEntries).Length;
+        return words >= 5;
+    }
+
+    private static string CleanFragment(string fragment)
+    {
+        return fragment.Trim().TrimEnd('.');
+    }
+
+    private static string BuildCleanDaySummary(
+        List<string> advances,
+        List<string> visual,
+        List<string> bugs,
+        List<string> future,
+        List<string> unclear,
+        EditorialDiagnostic diagnostic)
+    {
+        if (advances.Count > 0)
+        {
+            return "El día contiene avances potencialmente publicables, pero conviene apoyarlos con contexto antes de convertirlos en contenido público.";
+        }
+
+        if (visual.Count > 0)
+        {
+            return "El día destaca más por material visual o ideas curiosas que por un avance explicado en profundidad.";
+        }
+
+        if (bugs.Count > 0 || future.Count > 0)
+        {
+            return "Las notas parecen útiles para seguimiento interno, pruebas o decisiones futuras, no para una publicación larga.";
+        }
+
+        if (unclear.Count > 0 || diagnostic.InformationLevel == "bajo")
+        {
+            return "Las notas tienen poco contexto. Aiko debería pedir más información antes de redactar contenido público amplio.";
+        }
+
+        return "No hay suficiente material organizado para resumir el día con seguridad.";
+    }
+
+    private static string BuildDeveloperNotesRecommendation(
+        EditorialDiagnostic diagnostic,
+        List<string> advances,
+        List<string> visual,
+        List<string> bugs,
+        List<string> future,
+        List<string> unclear)
+    {
+        var notes = new List<string>
+        {
+            "Formato recomendado: " + diagnostic.RecommendedType + ".",
+            "Motivo: " + diagnostic.Reason
+        };
+
+        if (unclear.Count > 0)
+        {
+            notes.Add("No convertir notas confusas en afirmaciones públicas.");
+        }
+
+        if (future.Count > 0)
+        {
+            notes.Add("No presentar ideas futuras como contenido ya terminado.");
+        }
+
+        if (bugs.Count > 0)
+        {
+            notes.Add("Separar bugs y pruebas del discurso público o tratarlos como desarrollo en curso.");
+        }
+
+        if (visual.Count > advances.Count)
+        {
+            notes.Add("Si se publica algo, probablemente funcione mejor como post corto o pieza visual.");
+        }
+
+        return string.Join(Environment.NewLine, notes.Select(note => "- " + note));
+    }
+
+    private static string FormatMarkdownList(List<string> items, string emptyMessage)
+    {
+        var cleanItems = items
+            .Where(item => !string.IsNullOrWhiteSpace(item))
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .ToList();
+
+        return cleanItems.Count == 0 ? "- " + emptyMessage : string.Join(Environment.NewLine, cleanItems.Select(item => "- " + item));
+    }
+
     private void AnalyzeMaterial()
     {
         EnsureDay(_currentDay);
         SaveNotes();
         var output = Path.Combine(_dayPath, "Salida");
         Directory.CreateDirectory(output);
+        WriteOrganizedNotes(output);
         var diagnostic = WriteEditorialOutputs(output);
         SetRecommendation(diagnostic.RecommendedType);
         SetStatus("Material analizado. Recomendación: " + ToTitle(diagnostic.RecommendedType) + ".");
@@ -1201,6 +1435,7 @@ public partial class Form1 : Form
 
         var files = Directory.GetFiles(output, "*.md")
             .Where(file => !string.Equals(Path.GetFileName(file), "paquete_para_aiko.md", StringComparison.OrdinalIgnoreCase))
+            .Where(file => !string.Equals(Path.GetFileName(file), "notas_organizadas.md", StringComparison.OrdinalIgnoreCase))
             .Where(file => !string.Equals(Path.GetFileName(file), "diagnostico_editorial.md", StringComparison.OrdinalIgnoreCase))
             .Where(file => !string.Equals(Path.GetFileName(file), "titulos_y_descripciones.md", StringComparison.OrdinalIgnoreCase))
             .Where(file => !string.Equals(Path.GetFileName(file), "recomendaciones_publicacion.md", StringComparison.OrdinalIgnoreCase))

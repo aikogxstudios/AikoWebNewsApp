@@ -19,14 +19,15 @@ La publicación actual es **self-contained win-x64**, así que está pensada par
 1. Pulsa **Crear día actual**.
 2. Importa capturas y vídeos.
 3. Escribe notas reales del día.
-4. Pulsa **Analizar material** o **Preparar contenido** para generar el diagnóstico editorial.
-5. Pulsa **Generar paquete para Aiko**.
-6. Revisa la etiqueta de recomendación o abre **Ver diagnóstico editorial**.
-7. Pega el paquete en ChatGPT/Aiko.
-8. Copia la respuesta de Aiko.
-9. Pégala en la pestaña **Respuesta de Aiko**.
-10. Pulsa **Guardar respuesta de Aiko**.
-11. Revisa los `.md` finales en `Salida` y `Borradores`.
+4. Pulsa **Organizar notas** si tus notas están caóticas.
+5. Pulsa **Analizar material** o **Preparar contenido** para generar el diagnóstico editorial.
+6. Pulsa **Generar paquete para Aiko**.
+7. Revisa la etiqueta de recomendación o abre **Ver diagnóstico editorial**.
+8. Pega el paquete en ChatGPT/Aiko.
+9. Copia la respuesta de Aiko.
+10. Pégala en la pestaña **Respuesta de Aiko**.
+11. Pulsa **Guardar respuesta de Aiko**.
+12. Revisa los `.md` finales en `Salida` y `Borradores`.
 
 ## Crear un día
 
@@ -75,9 +76,29 @@ Archivos generados en `Dias\YYYY-MM-DD\Salida`:
 - `ideas_youtube_shorts.md`
 - `resumen_del_dia.md`
 - `imagenes_recomendadas.md`
+- `notas_organizadas.md`
 - `diagnostico_editorial.md`
 - `titulos_y_descripciones.md`
 - `recomendaciones_publicacion.md`
+
+## Organizador de notas
+
+El botón **Organizar notas** lee las notas del día y genera:
+
+`Dias\YYYY-MM-DD\Salida\notas_organizadas.md`
+
+Este archivo separa la materia prima del desarrollador en:
+
+- resumen limpio del día
+- avances reales detectados
+- material visual o destacable
+- bugs, pruebas o problemas
+- ideas futuras o pendientes
+- notas confusas o con poco contexto
+- posibles posts cortos
+- recomendación editorial
+
+El paquete para Aiko incluye estas notas organizadas y avisa de que no debe convertir notas confusas en afirmaciones públicas.
 
 También copia esos borradores a:
 
