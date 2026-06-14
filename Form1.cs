@@ -48,6 +48,14 @@ public partial class Form1 : Form
         string Category,
         string Tags);
 
+    private sealed record ContentBankIdea(
+        string Title,
+        string Format,
+        string State,
+        string Reason,
+        string WhatToShow,
+        string SourceMaterial);
+
     private static readonly string[] RootFolders =
     [
         "Inbox",
@@ -242,6 +250,7 @@ public partial class Form1 : Form
         importButtons.Controls.Add(MakeButton("Analizar material", AnalyzeMaterial));
         importButtons.Controls.Add(MakeButton("Preparar contenido", PrepareContent, true));
         importButtons.Controls.Add(MakeButton("Generar paquete para Aiko", GenerateAikoPackage, true));
+        importButtons.Controls.Add(MakeButton("Generar ideas Content Bank", GenerateContentBankIdeas, true));
         right.Controls.Add(importButtons, 0, 3);
 
         var copyButtons = new FlowLayoutPanel { Dock = DockStyle.Fill, BackColor = BackColor };
@@ -249,6 +258,7 @@ public partial class Form1 : Form
         copyButtons.Controls.Add(MakeButton("Copiar Discord", () => CopyOutput("post_discord.md")));
         copyButtons.Controls.Add(MakeButton("Copiar X", () => CopyOutput("post_x.md")));
         copyButtons.Controls.Add(MakeButton("Ver diagnóstico editorial", OpenEditorialDiagnostic));
+        copyButtons.Controls.Add(MakeButton("Abrir Content Bank", OpenContentBankFolder));
         copyButtons.Controls.Add(MakeButton("Crear borrador WordPress", CreateWordPressDraft));
         copyButtons.Controls.Add(MakeButton("Abrir borrador manual", OpenManualWordPressDraft));
         copyButtons.Controls.Add(MakeButton("Marcar como publicado", MarkAsPublished));
@@ -1120,6 +1130,42 @@ public partial class Form1 : Form
         SetStatus("Material analizado. Recomendación: " + ToTitle(diagnostic.RecommendedType) + ".");
     }
 
+    private void GenerateContentBankIdeas()
+    {
+        EnsureDay(_currentDay);
+        SaveNotes();
+
+        var output = Path.Combine(_dayPath, "Salida");
+        Directory.CreateDirectory(output);
+        WriteOrganizedNotes(output);
+        var diagnostic = WriteEditorialOutputs(output);
+
+        var contentBankFolder = GetContentBankFolder();
+        Directory.CreateDirectory(contentBankFolder);
+
+        var captures = GetFiles("Capturas").Select(Path.GetFileName).Where(x => x is not null).Cast<string>().ToList();
+        var videos = GetFiles("Videos").Select(Path.GetFileName).Where(x => x is not null).Cast<string>().ToList();
+        var organizedNotes = ReadOutputFileForPackage("notas_organizadas.md", "Todavia no hay notas organizadas generadas.");
+        var ideas = BuildContentBankIdeas(diagnostic, captures, videos);
+
+        File.WriteAllText(Path.Combine(contentBankFolder, "paquete_para_contentbank.md"), BuildContentBankPackage(diagnostic, captures, videos, organizedNotes, ideas), Encoding.UTF8);
+        File.WriteAllText(Path.Combine(contentBankFolder, "ideas_tiktok_shorts.md"), BuildContentBankTikTokShorts(ideas), Encoding.UTF8);
+        File.WriteAllText(Path.Combine(contentBankFolder, "esta_semana.md"), BuildContentBankWeekPlan(ideas), Encoding.UTF8);
+        File.WriteAllText(Path.Combine(contentBankFolder, "necesitan_clip.md"), BuildNeedsClipMarkdown(ideas, videos), Encoding.UTF8);
+        File.WriteAllText(Path.Combine(contentBankFolder, "necesitan_captura.md"), BuildNeedsCaptureMarkdown(ideas, captures), Encoding.UTF8);
+        File.WriteAllText(Path.Combine(contentBankFolder, "reciclables.md"), BuildRecyclableContentMarkdown(diagnostic, ideas), Encoding.UTF8);
+        File.WriteAllText(Path.Combine(contentBankFolder, "publicaciones_realizadas_template.md"), BuildPublishedContentTemplate(), Encoding.UTF8);
+
+        SetRecommendation(diagnostic.RecommendedType);
+        SetStatus("Ideas Content Bank generadas localmente. Revisa y copia manualmente las ideas utiles.");
+    }
+
+    private void OpenContentBankFolder()
+    {
+        EnsureDay(_currentDay);
+        OpenFolder(GetContentBankFolder());
+    }
+
     private EditorialDiagnostic WriteEditorialOutputs(string output)
     {
         var diagnostic = CreateEditorialDiagnostic();
@@ -1423,6 +1469,226 @@ public partial class Form1 : Form
 
         {diagnostic.MissingForStrongWebEntry}
         """.Trim() + Environment.NewLine;
+    }
+
+    private List<ContentBankIdea> BuildContentBankIdeas(EditorialDiagnostic diagnostic, List<string> captures, List<string> videos)
+    {
+        var ideas = new List<ContentBankIdea>();
+        var hasCapture = captures.Count > 0;
+        var hasVideo = videos.Count > 0;
+        var keywords = diagnostic.Keywords.Select(RemoveAccentsFallback).ToList();
+        var hasCards = keywords.Any(keyword => keyword.Contains("cartas") || keyword.Contains("evento"));
+        var hasVisualHook = keywords.Any(keyword => keyword.Contains("limon") || keyword.Contains("nubes") || keyword.Contains("visual") || keyword.Contains("capturas"));
+        var hasEnoughContext = diagnostic.InformationLevel != "bajo";
+
+        if (hasVideo)
+        {
+            ideas.Add(new ContentBankIdea(
+                "Clip corto con el material del dia",
+                "TikTok / YouTube Shorts",
+                "Lista para revisar",
+                "Hay al menos un video disponible para convertir en pieza corta.",
+                string.Join(", ", videos),
+                "Videos del dia"));
+        }
+        else
+        {
+            ideas.Add(new ContentBankIdea(
+                "Clip corto pendiente del avance mas visual",
+                "TikTok / YouTube Shorts",
+                "Necesita contexto",
+                "La idea puede funcionar en video, pero falta clip grabado.",
+                "Grabar 8-15 segundos del elemento mas claro del dia.",
+                "Notas y material pendiente"));
+        }
+
+        if (hasCapture || hasVisualHook)
+        {
+            ideas.Add(new ContentBankIdea(
+                hasVisualHook ? "Rareza visual o detalle curioso del desarrollo" : "Captura destacada del dia",
+                "Discord / X",
+                hasCapture ? "Lista para revisar" : "Necesita contexto",
+                hasCapture ? "Hay captura disponible para acompanar el post." : "Hay gancho visual en notas, pero falta captura.",
+                hasCapture ? string.Join(", ", captures) : "Capturar el elemento visual antes de publicarlo.",
+                hasCapture ? "Capturas del dia" : "Notas del dia"));
+        }
+
+        if (hasCards)
+        {
+            ideas.Add(new ContentBankIdea(
+                "Pregunta de comunidad sobre cartas o eventos",
+                "Discord / X",
+                hasEnoughContext ? "Lista para revisar" : "Necesita contexto",
+                hasEnoughContext ? "La nota apunta a cartas o eventos con algo de contexto." : "Hay senal de cartas, pero falta explicar que se esta probando.",
+                "Pregunta corta sin prometer mecanicas cerradas.",
+                "Notas del dia"));
+        }
+
+        ideas.Add(new ContentBankIdea(
+            "Mini registro de desarrollo para archivo interno",
+            "Web/devlog / itch.io",
+            diagnostic.RecommendedType is "devlog completo" or "mini devlog" ? "Lista para revisar" : "Necesita contexto",
+            diagnostic.RecommendedType is "devlog completo" or "mini devlog"
+                ? "El diagnostico local permite convertirlo en update revisable."
+                : "El diagnostico local no recomienda forzar web todavia.",
+            "Usar solo avances reales, sin vender humo ni prometer fechas.",
+            "Diagnostico editorial"));
+
+        return ideas;
+    }
+
+    private string BuildContentBankPackage(EditorialDiagnostic diagnostic, List<string> captures, List<string> videos, string organizedNotes, List<ContentBankIdea> ideas)
+    {
+        return $"""
+        # Paquete local para AikoGx-ContentBank
+
+        Fecha: {_currentDay}
+        Estudio: AikoGx Studios
+        Nombre publico visible: Fak
+        Proyecto activo: Caos Entre Reinos: Reborn
+
+        ## Regla de uso
+
+        Este paquete es solo local. No publica automaticamente, no conecta con GitHub y no modifica WordPress.
+        Copiar manualmente al repo `AikoGx-ContentBank` solo las ideas que Fak quiera conservar.
+
+        ## Diagnostico local
+
+        - Nivel de informacion: {diagnostic.InformationLevel}
+        - Tipo recomendado: {diagnostic.RecommendedType}
+        - Motivo: {diagnostic.Reason}
+
+        ## Notas organizadas
+
+        {organizedNotes}
+
+        ## Capturas disponibles
+
+        {FormatFileList(captures, "No se detectaron capturas.")}
+
+        ## Videos disponibles
+
+        {FormatFileList(videos, "No se detectaron videos.")}
+
+        ## Ideas candidatas
+
+        {FormatContentBankIdeas(ideas)}
+
+        ## Criterio editorial
+
+        - No publicar automaticamente.
+        - No conectar esta app con GitHub.
+        - No prometer fechas.
+        - No convertir notas confusas en anuncios.
+        - Si una idea no esta clara, mantener `Estado: Necesita contexto`.
+        """.Trim() + Environment.NewLine;
+    }
+
+    private static string BuildContentBankTikTokShorts(List<ContentBankIdea> ideas)
+    {
+        var shortIdeas = ideas
+            .Where(idea => idea.Format.Contains("TikTok", StringComparison.OrdinalIgnoreCase) || idea.Format.Contains("Shorts", StringComparison.OrdinalIgnoreCase))
+            .ToList();
+
+        if (shortIdeas.Count == 0)
+        {
+            shortIdeas.Add(new ContentBankIdea(
+                "Video corto pendiente de definir",
+                "TikTok / YouTube Shorts",
+                "Necesita contexto",
+                "No hay una idea visual clara todavia.",
+                "Anadir captura o clip antes de preparar guion.",
+                "Material del dia"));
+        }
+
+        return "# Ideas TikTok / YouTube Shorts" + Environment.NewLine + Environment.NewLine + FormatContentBankIdeas(shortIdeas);
+    }
+
+    private static string BuildContentBankWeekPlan(List<ContentBankIdea> ideas)
+    {
+        var visual = ideas.FirstOrDefault(idea => idea.Format.Contains("TikTok", StringComparison.OrdinalIgnoreCase) || idea.Format.Contains("Shorts", StringComparison.OrdinalIgnoreCase) || idea.Reason.Contains("captura", StringComparison.OrdinalIgnoreCase))
+            ?? new ContentBankIdea("Pieza visual pendiente", "TikTok / YouTube Shorts", "Necesita contexto", "Falta clip o captura.", "Conseguir material visual.", "Material pendiente");
+        var community = ideas.FirstOrDefault(idea => idea.Format.Contains("Discord", StringComparison.OrdinalIgnoreCase) || idea.Title.Contains("Pregunta", StringComparison.OrdinalIgnoreCase))
+            ?? new ContentBankIdea("Pregunta de comunidad pendiente", "Discord / X", "Necesita contexto", "Falta una pregunta concreta.", "Definir tema seguro sin spoilers.", "Material pendiente");
+
+        return $"""
+        # Esta semana
+
+        ## 1. Pieza visual del juego
+
+        {FormatContentBankIdea(visual)}
+
+        ## 2. Pieza de comunidad
+
+        {FormatContentBankIdea(community)}
+        """.Trim() + Environment.NewLine;
+    }
+
+    private static string BuildNeedsClipMarkdown(List<ContentBankIdea> ideas, List<string> videos)
+    {
+        var pending = videos.Count == 0
+            ? ideas.Where(idea => idea.Format.Contains("TikTok", StringComparison.OrdinalIgnoreCase) || idea.Format.Contains("Shorts", StringComparison.OrdinalIgnoreCase)).ToList()
+            : [];
+
+        return "# Necesitan clip" + Environment.NewLine + Environment.NewLine +
+            (pending.Count == 0 ? "- No hay ideas pendientes de clip por ahora." : FormatContentBankIdeas(pending));
+    }
+
+    private static string BuildNeedsCaptureMarkdown(List<ContentBankIdea> ideas, List<string> captures)
+    {
+        var pending = captures.Count == 0
+            ? ideas.Where(idea => idea.State == "Necesita contexto").ToList()
+            : [];
+
+        return "# Necesitan captura" + Environment.NewLine + Environment.NewLine +
+            (pending.Count == 0 ? "- No hay ideas pendientes de captura por ahora." : FormatContentBankIdeas(pending));
+    }
+
+    private static string BuildRecyclableContentMarkdown(EditorialDiagnostic diagnostic, List<ContentBankIdea> ideas)
+    {
+        return $"""
+        # Ideas reciclables
+
+        - Estado: {(diagnostic.InformationLevel == "bajo" ? "Necesita contexto" : "Lista para revisar")}
+        - Idea: convertir el aprendizaje del dia en una nota corta de proceso indie.
+        - Uso posible: Discord, X, hilo interno o futuro devlog.
+        - Cuidado: no presentar pruebas como sistemas terminados.
+
+        ## Ideas base del dia
+
+        {FormatContentBankIdeas(ideas)}
+        """.Trim() + Environment.NewLine;
+    }
+
+    private static string BuildPublishedContentTemplate()
+    {
+        return """
+        # Publicaciones realizadas - plantilla
+
+        Copiar manualmente al banco de contenido cuando Fak publique o archive una idea.
+
+        | Fecha | Plataforma | Titulo/idea | Estado | Enlace | Notas |
+        | --- | --- | --- | --- | --- | --- |
+        | YYYY-MM-DD | TikTok/Shorts/Discord/X/Web/itch.io |  | Pendiente / Publicado / Reciclable |  |  |
+        """.Trim() + Environment.NewLine;
+    }
+
+    private static string FormatContentBankIdeas(List<ContentBankIdea> ideas)
+    {
+        return string.Join(Environment.NewLine + Environment.NewLine, ideas.Select(FormatContentBankIdea));
+    }
+
+    private static string FormatContentBankIdea(ContentBankIdea idea)
+    {
+        return $"""
+        ### {idea.Title}
+
+        - Formato: {idea.Format}
+        - Estado: {idea.State}
+        - Motivo: {idea.Reason}
+        - Que mostrar: {idea.WhatToShow}
+        - Material fuente: {idea.SourceMaterial}
+        """.Trim();
     }
 
     private List<string> ReadNoteContents()
@@ -2132,6 +2398,11 @@ public partial class Form1 : Form
     private string GetAikoPackagePath()
     {
         return Path.Combine(_dayPath, "Salida", "paquete_para_aiko.md");
+    }
+
+    private string GetContentBankFolder()
+    {
+        return Path.Combine(_dayPath, "Salida", "ContentBank");
     }
 
     private void TryCopyToClipboard(string text, string successMessage)

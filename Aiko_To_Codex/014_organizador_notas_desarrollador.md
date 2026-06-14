@@ -2,7 +2,7 @@
 
 ## Contexto
 
-Fagner/Fak escribe notas dentro de la app de forma rapida, mezclada y caotica. Esas notas no son texto final. Son materia prima de desarrollo.
+Fak escribe notas dentro de la app de forma rapida, mezclada y caotica. Esas notas no son texto final. Son materia prima de desarrollo.
 
 La app ya genera diagnostico editorial y borradores, pero falta una capa importante: organizar esas notas como lo haria un desarrollador antes de convertirlas en contenido publico.
 

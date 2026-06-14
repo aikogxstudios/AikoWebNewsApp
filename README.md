@@ -104,6 +104,26 @@ También copia esos borradores a:
 
 `Borradores\YYYY-MM-DD`
 
+## Content Bank
+
+Pulsa **Generar ideas Content Bank** para crear ideas locales destinadas al repo `AikoGx-ContentBank`.
+
+La app genera:
+
+`Dias\YYYY-MM-DD\Salida\ContentBank\`
+
+Con estos archivos:
+
+- `paquete_para_contentbank.md`
+- `ideas_tiktok_shorts.md`
+- `esta_semana.md`
+- `necesitan_clip.md`
+- `necesitan_captura.md`
+- `reciclables.md`
+- `publicaciones_realizadas_template.md`
+
+Este flujo no publica nada, no conecta con GitHub y no toca WordPress. Las ideas son material para revisar y copiar manualmente. Si una idea no está clara, queda marcada como `Estado: Necesita contexto`.
+
 ## Modo Aiko
 
 Pulsa **Generar paquete para Aiko**.

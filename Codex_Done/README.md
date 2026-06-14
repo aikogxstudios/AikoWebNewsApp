@@ -2,7 +2,7 @@
 
 Carpeta para guardar tareas ya revisadas y aceptadas.
 
-Cuando una tarea termine y Fagner/Fak la apruebe, se puede mover o copiar aquí para dejar historial del trabajo completado.
+Cuando una tarea termine y Fak la apruebe, se puede mover o copiar aquí para dejar historial del trabajo completado.
 
 Cada entrega aceptada puede incluir:
 

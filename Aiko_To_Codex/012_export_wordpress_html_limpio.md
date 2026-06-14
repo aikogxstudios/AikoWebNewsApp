@@ -2,7 +2,7 @@
 
 ## Estado
 
-Tarea futura. No ejecutar todavia salvo que Aiko o Fagner/Fak lo pidan.
+Tarea futura. No ejecutar todavia salvo que Aiko o Fak lo pidan.
 
 ## Objetivo
 

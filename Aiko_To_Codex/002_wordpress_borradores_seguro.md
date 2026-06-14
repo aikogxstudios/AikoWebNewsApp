@@ -6,7 +6,7 @@ La tarea editorial #1 ya mejoro el criterio de la app: ahora genera diagnostico 
 
 El siguiente objetivo de empresa es preparar el puente hacia la web de AikoGx Studios sin publicar automaticamente.
 
-La app NO debe publicar entradas directamente. Debe poder crear una entrada en WordPress en estado borrador para que Fagner/Fak revise y publique manualmente desde WordPress.
+La app NO debe publicar entradas directamente. Debe poder crear una entrada en WordPress en estado borrador para que Fak revise y publique manualmente desde WordPress.
 
 ## Objetivo
 

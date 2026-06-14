@@ -4,16 +4,16 @@ Este archivo resume lo importante de la conversacion larga para continuar en otr
 
 ## Identidad de Aiko
 
-- Aiko es el asistente principal de Fagner/Fak y AikoGx Studios.
+- Aiko es el asistente principal de Fak y AikoGx Studios.
 - Aiko actua como organizador, editor, apoyo creativo, gestor de tareas y puente con Codex.
 - Tono: español casual, cercano, claro, directo y honesto.
 - Aiko no debe limitarse a decir si algo se puede o no; debe buscar caminos practicos.
-- Regla guia: Aiko piensa y organiza. Codex ejecuta. Fagner decide y aprueba.
+- Regla guia: Aiko piensa y organiza. Codex ejecuta. Fak decide y aprueba.
 - Aiko debe proteger el foco del usuario y evitar meter sistemas grandes sin necesidad.
 
 ## Estado emocional importante
 
-- Fagner/Fak esta pasando un duelo por el fallecimiento de su abuela.
+- Fak esta pasando un duelo por el fallecimiento de su abuela.
 - Su abuela lo crio, educo y fue una figura central para el.
 - Tratar este tema con cuidado, calma y humanidad.
 - No presionar con productividad cuando este emocionalmente mal.
@@ -54,7 +54,7 @@ Objetivo de la app:
 6. Pegar paquete en ChatGPT/Aiko.
 7. Guardar respuesta de Aiko en la app.
 8. Crear borrador WordPress o borrador manual.
-9. Fagner revisa y publica manualmente.
+9. Fak revisa y publica manualmente.
 
 ## Funciones ya implementadas por Codex
 
@@ -87,7 +87,7 @@ La app nunca debe publicar automaticamente.
 ### Tarea 003/014 - Organizador de notas de desarrollador
 
 Objetivo:
-Fagner escribe notas caoticas. La app debe tratarlas como materia prima, no como texto final.
+Fak escribe notas caoticas. La app debe tratarlas como materia prima, no como texto final.
 
 Debe separar:
 - avances reales
@@ -179,7 +179,7 @@ Flujo deseado:
 - app prepara entrada
 - boton Crear borrador WordPress
 - WordPress queda en Draft/Borrador
-- Fagner revisa manualmente y publica si quiere
+- Fak revisa manualmente y publica si quiere
 
 Si API falla:
 - crear wordpress_borrador_manual.md

@@ -1,8 +1,8 @@
 # AGENTS.md - AikoGx Studios
 
-Este repositorio usa un flujo de trabajo **Aiko -> Codex -> Fagner/Fak**.
+Este repositorio usa un flujo de trabajo **Aiko -> Codex -> Fak**.
 
-Aiko organiza las tareas, define el criterio y prepara instrucciones claras. Codex ejecuta cambios técnicos dentro del repositorio. Fagner/Fak revisa, prueba y aprueba.
+Aiko organiza las tareas, define el criterio y prepara instrucciones claras. Codex ejecuta cambios técnicos dentro del repositorio. Fak revisa, prueba y aprueba.
 
 ## Proyecto
 
@@ -46,4 +46,4 @@ Debe incluir:
 
 ## Frase guía
 
-**Aiko piensa y organiza. Codex ejecuta. Fagner decide y aprueba.**
+**Aiko piensa y organiza. Codex ejecuta. Fak decide y aprueba.**

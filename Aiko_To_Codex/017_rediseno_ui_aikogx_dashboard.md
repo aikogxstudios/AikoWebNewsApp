@@ -8,7 +8,7 @@ La issue #4 / tarea 016 ya fue revisada y cerrada como completada. El resumen `C
 
 ## Contexto general
 
-La app ya funciona a nivel tecnico y editorial, pero visualmente todavia se siente como una herramienta tecnica con muchos botones visibles. Fagner/Fak quiere que se sienta como un dashboard interno premium de AikoGx Studios: clara, bonita, ordenada y facil de usar.
+La app ya funciona a nivel tecnico y editorial, pero visualmente todavia se siente como una herramienta tecnica con muchos botones visibles. Fak quiere que se sienta como un dashboard interno premium de AikoGx Studios: clara, bonita, ordenada y facil de usar.
 
 Importante: esta app es para todo AikoGx Studios, no solo para Caos Entre Reinos. Caos puede seguir siendo el proyecto activo por defecto, pero la marca visible debe ser AikoGx Studios.
 
@@ -375,7 +375,7 @@ El resumen debe incluir:
 
 ## Nota final para Codex
 
-Esta tarea es principalmente de UI/UX y organizacion visual. No intentes resolver todo el backlog. El objetivo es que Fagner/Fak abra la app y entienda rapidamente:
+Esta tarea es principalmente de UI/UX y organizacion visual. No intentes resolver todo el backlog. El objetivo es que Fak abra la app y entienda rapidamente:
 
 1. que material tiene hoy,
 2. que falta,

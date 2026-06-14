@@ -2,7 +2,7 @@
 
 ## Estado
 
-Tarea futura. No ejecutar todavia salvo que Aiko o Fagner/Fak lo pidan.
+Tarea futura. No ejecutar todavia salvo que Aiko o Fak lo pidan.
 
 ## Objetivo
 
@@ -17,7 +17,7 @@ Agregar un checklist visual o archivo de control para revisar antes de publicar 
 - Hay imagen o video recomendado.
 - Hay tags y hashtags.
 - Aiko reviso el texto.
-- Fagner/Fak aprobo manualmente.
+- Fak aprobo manualmente.
 - Si va a WordPress, esta en borrador, no publicado.
 
 ## Resultado esperado

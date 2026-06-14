@@ -62,6 +62,6 @@ Validó que:
 
 ## Próximos pasos
 
-- Ajustar palabras clave con ejemplos reales de notas de Fagner/Fak.
+- Ajustar palabras clave con ejemplos reales de notas de Fak.
 - Añadir vista previa de `notas_organizadas.md` si se vuelve necesario.
 - Usar este archivo como base para futuras plantillas por tipo de contenido.
