@@ -19,13 +19,14 @@ La publicación actual es **self-contained win-x64**, así que está pensada par
 1. Pulsa **Crear día actual**.
 2. Importa capturas y vídeos.
 3. Escribe notas reales del día.
-4. Pulsa **Generar paquete para Aiko**.
-5. Revisa la etiqueta de recomendación o abre **Ver diagnóstico editorial**.
-6. Pega el paquete en ChatGPT/Aiko.
-7. Copia la respuesta de Aiko.
-8. Pégala en la pestaña **Respuesta de Aiko**.
-9. Pulsa **Guardar respuesta de Aiko**.
-10. Revisa los `.md` finales en `Salida` y `Borradores`.
+4. Pulsa **Analizar material** o **Preparar contenido** para generar el diagnóstico editorial.
+5. Pulsa **Generar paquete para Aiko**.
+6. Revisa la etiqueta de recomendación o abre **Ver diagnóstico editorial**.
+7. Pega el paquete en ChatGPT/Aiko.
+8. Copia la respuesta de Aiko.
+9. Pégala en la pestaña **Respuesta de Aiko**.
+10. Pulsa **Guardar respuesta de Aiko**.
+11. Revisa los `.md` finales en `Salida` y `Borradores`.
 
 ## Crear un día
 
@@ -75,6 +76,8 @@ Archivos generados en `Dias\YYYY-MM-DD\Salida`:
 - `resumen_del_dia.md`
 - `imagenes_recomendadas.md`
 - `diagnostico_editorial.md`
+- `titulos_y_descripciones.md`
+- `recomendaciones_publicacion.md`
 
 También copia esos borradores a:
 
@@ -102,7 +105,7 @@ Este paquete está pensado para pegarlo en ChatGPT/Aiko y pedir una versión mej
 Antes de pedir contenido largo, el paquete incluye una fase editorial para que Aiko decida si conviene preparar:
 
 - devlog completo
-- avance corto
+- mini devlog
 - solo redes
 - idea para vídeo
 - nota interna
@@ -127,6 +130,8 @@ Este archivo incluye:
 - motivo de la recomendación
 - qué falta para una entrada web fuerte
 - qué contenido sí se puede preparar hoy
+- títulos recomendados y descripción corta
+- recomendación de plataformas, tags, hashtags y riesgo de publicación pobre
 
 Puedes abrirlo con **Ver diagnóstico editorial**.
 

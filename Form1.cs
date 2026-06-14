@@ -20,8 +20,10 @@ public partial class Form1 : Form
 
     private sealed record EditorialDiagnostic(
         int NoteCount,
+        int WordCount,
         int CaptureCount,
         int VideoCount,
+        IReadOnlyList<string> Keywords,
         string Summary,
         string InformationLevel,
         string RecommendedType,
@@ -219,6 +221,7 @@ public partial class Form1 : Form
         }));
         importButtons.Controls.Add(MakeButton("Importar capturas", ImportCaptures));
         importButtons.Controls.Add(MakeButton("Importar vídeos", ImportVideos));
+        importButtons.Controls.Add(MakeButton("Analizar material", AnalyzeMaterial));
         importButtons.Controls.Add(MakeButton("Preparar contenido", PrepareContent, true));
         importButtons.Controls.Add(MakeButton("Generar paquete para Aiko", GenerateAikoPackage, true));
         right.Controls.Add(importButtons, 0, 3);
@@ -544,7 +547,7 @@ public partial class Form1 : Form
         Write(output, "ideas_youtube_shorts.md", BuildShortsIdeas(captures, videos, highlight));
         Write(output, "resumen_del_dia.md", BuildDailySummary(notes, captures, videos, highlight));
         Write(output, "imagenes_recomendadas.md", BuildRecommendedImages(captures, mainImage));
-        var diagnostic = WriteEditorialDiagnostic(output);
+        var diagnostic = WriteEditorialOutputs(output);
 
         CopyDraftsToBorradores(output);
         LoadPreviews();
@@ -561,7 +564,7 @@ public partial class Form1 : Form
         var output = Path.Combine(_dayPath, "Salida");
         Directory.CreateDirectory(output);
 
-        var diagnostic = WriteEditorialDiagnostic(output);
+        var diagnostic = WriteEditorialOutputs(output);
         var package = BuildAikoPackage();
         var packagePath = GetAikoPackagePath();
         File.WriteAllText(packagePath, package, Encoding.UTF8);
@@ -578,6 +581,8 @@ public partial class Form1 : Form
         var existingOutputs = ReadExistingOutputFiles();
         var diagnosticPath = GetEditorialDiagnosticPath();
         var diagnostic = File.Exists(diagnosticPath) ? File.ReadAllText(diagnosticPath, Encoding.UTF8).Trim() : BuildEditorialDiagnosticMarkdown(CreateEditorialDiagnostic());
+        var titles = ReadOutputFileForPackage("titulos_y_descripciones.md", "Todavía no hay títulos y descripciones generados.");
+        var publicationRecommendations = ReadOutputFileForPackage("recomendaciones_publicacion.md", "Todavía no hay recomendaciones de publicación generadas.");
 
         return $"""
         # Paquete para Aiko - Devlog del día
@@ -602,6 +607,14 @@ public partial class Form1 : Form
 
         {diagnostic}
 
+        ## Títulos y descripciones locales
+
+        {titles}
+
+        ## Recomendaciones de publicación locales
+
+        {publicationRecommendations}
+
         ## Borradores base existentes
 
         {existingOutputs}
@@ -620,7 +633,7 @@ public partial class Form1 : Form
 
         ## Instrucciones para Aiko
 
-        Antes de redactar, analiza el material disponible y decide si conviene hacer un devlog completo, un avance corto, solo redes, ideas de vídeo, nota interna o no publicar todavía. No fuerces una entrada larga si la información es poca. No repitas la misma idea muchas veces. Si el material no da para web, dilo claramente y prepara solo el formato adecuado.
+        Antes de redactar, analiza el material disponible y decide si conviene hacer un devlog completo, un mini devlog, solo redes, ideas de vídeo, nota interna o no publicar todavía. No generes una entrada larga si el material no lo justifica. Decide el formato correcto y genera solo el contenido que tenga sentido. No repitas la misma idea muchas veces. Si el material no da para web, dilo claramente y prepara solo el formato adecuado.
 
         Redacta contenido en español con tono cercano, indie, honesto y creativo.
         No rellenes por rellenar.
@@ -646,7 +659,7 @@ public partial class Form1 : Form
 
         # Diagnóstico editorial
 
-        * Tipo recomendado:
+        * Tipo recomendado: devlog completo, mini devlog, solo redes, idea para vídeo, nota interna o no publicar todavía
         * Nivel de información:
         * ¿Publicar en web?: Sí/No
         * ¿Publicar en redes?: Sí/No
@@ -666,7 +679,7 @@ public partial class Form1 : Form
         * Ideas YouTube Shorts
         * Imagen recomendada
 
-        Si recomiendas avance corto:
+        Si recomiendas mini devlog:
 
         * Mini entrada web o update corto
         * Post Discord
@@ -700,10 +713,29 @@ public partial class Form1 : Form
         """.Trim() + Environment.NewLine;
     }
 
-    private EditorialDiagnostic WriteEditorialDiagnostic(string output)
+    private string ReadOutputFileForPackage(string fileName, string fallback)
+    {
+        var path = Path.Combine(_dayPath, "Salida", fileName);
+        return File.Exists(path) ? File.ReadAllText(path, Encoding.UTF8).Trim() : fallback;
+    }
+
+    private void AnalyzeMaterial()
+    {
+        EnsureDay(_currentDay);
+        SaveNotes();
+        var output = Path.Combine(_dayPath, "Salida");
+        Directory.CreateDirectory(output);
+        var diagnostic = WriteEditorialOutputs(output);
+        SetRecommendation(diagnostic.RecommendedType);
+        SetStatus("Material analizado. Recomendación: " + ToTitle(diagnostic.RecommendedType) + ".");
+    }
+
+    private EditorialDiagnostic WriteEditorialOutputs(string output)
     {
         var diagnostic = CreateEditorialDiagnostic();
         File.WriteAllText(Path.Combine(output, "diagnostico_editorial.md"), BuildEditorialDiagnosticMarkdown(diagnostic), Encoding.UTF8);
+        File.WriteAllText(Path.Combine(output, "titulos_y_descripciones.md"), BuildTitlesAndDescriptionsMarkdown(diagnostic), Encoding.UTF8);
+        File.WriteAllText(Path.Combine(output, "recomendaciones_publicacion.md"), BuildPublicationRecommendationsMarkdown(diagnostic), Encoding.UTF8);
         return diagnostic;
     }
 
@@ -726,6 +758,7 @@ public partial class Form1 : Form
         var normalized = summary.ToLowerInvariant();
         var sentenceCount = summary.Split(['.', '!', '?', '\n', ';'], StringSplitOptions.RemoveEmptyEntries).Count(part => part.Trim().Length > 12);
         var wordCount = summary.Split([' ', '\r', '\n', '\t'], StringSplitOptions.RemoveEmptyEntries).Length;
+        var keywords = DetectKeywords(normalized);
         var hasImportantSystem = ContainsAny(normalized, ["cartas", "aguja", "abismo", "nexo", "clase", "clases", "enemigo", "enemigos", "combate", "sistema", "evento", "eventos", "exploración", "exploracion"]);
         var hasVisualHook = ContainsAny(normalized, ["limón", "limon", "gigante", "nube", "nubes", "visual", "color", "captura", "vídeo", "video", "escena", "zona"]);
         var hasSpoilerRisk = ContainsAny(normalized, ["spoiler", "secreto", "final", "lore importante", "revelación", "revelacion"]);
@@ -786,7 +819,7 @@ public partial class Form1 : Form
         }
         else if (wordCount >= 18 || hasImportantSystem)
         {
-            type = "avance corto";
+            type = "mini devlog";
             reason = "Hay una idea interesante, pero todavía no suficiente información para una entrada web larga.";
             missing = "Más detalles sobre qué cambió, estado del desarrollo y una imagen principal.";
             possible = "Mini update, Discord, X y una o dos ideas de vídeo si el tema lo permite.";
@@ -801,8 +834,10 @@ public partial class Form1 : Form
 
         return new EditorialDiagnostic(
             noteCount,
+            wordCount,
             captureCount,
             videoCount,
+            keywords,
             summary,
             level,
             type,
@@ -816,11 +851,15 @@ public partial class Form1 : Form
         return $"""
         # Diagnóstico editorial
 
+        Fecha: {DateTime.Now:yyyy-MM-dd}
+
         ## Material detectado
 
         - Cantidad de notas detectadas: {diagnostic.NoteCount}
+        - Longitud aproximada de notas: {diagnostic.WordCount} palabras
         - Cantidad de capturas detectadas: {diagnostic.CaptureCount}
         - Cantidad de vídeos detectados: {diagnostic.VideoCount}
+        - Palabras clave detectadas: {FormatInlineList(diagnostic.Keywords, "sin palabras clave claras")}
 
         ## Resumen real del material del día
 
@@ -845,6 +884,108 @@ public partial class Form1 : Form
         ## Qué contenido sí se puede preparar hoy
 
         {diagnostic.PossibleContentToday}
+        """.Trim() + Environment.NewLine;
+    }
+
+    private static string BuildTitlesAndDescriptionsMarkdown(EditorialDiagnostic diagnostic)
+    {
+        var titleBase = diagnostic.Summary.Length > 80 ? diagnostic.Summary[..80].Trim() + "..." : diagnostic.Summary;
+        var chosenTitle = diagnostic.RecommendedType switch
+        {
+            "devlog completo" => "Devlog de Caos Entre Reinos: Reborn - " + ShortTitle(titleBase),
+            "mini devlog" => "Mini devlog: " + ShortTitle(titleBase),
+            "solo redes" => "Pequeño avance del día: " + ShortTitle(titleBase),
+            "idea para vídeo" => "Idea visual del día: " + ShortTitle(titleBase),
+            "nota interna" => "Nota interna de desarrollo",
+            _ => "Material pendiente de completar"
+        };
+
+        var wordpressApplies = diagnostic.RecommendedType is "devlog completo" or "mini devlog";
+        return $"""
+        # Títulos y descripciones
+
+        ## Títulos recomendados según formato
+
+        - Web/devlog: {(wordpressApplies ? chosenTitle : "No recomendado todavía para web.")}
+        - Discord: {ShortTitle(titleBase)}
+        - X: {ShortTitle(titleBase)}
+        - Vídeo corto: {(diagnostic.RecommendedType is "idea para vídeo" or "solo redes" or "mini devlog" ? ShortTitle(titleBase) : "Solo si hay material visual suficiente.")}
+
+        ## Título elegido
+
+        {chosenTitle}
+
+        ## Subtítulo si aplica
+
+        {(wordpressApplies ? "Avance honesto del desarrollo, sin prometer fechas ni cerrar sistemas en prueba." : "No aplica todavía para una entrada web completa.")}
+
+        ## Descripción corta
+
+        {BuildShortDescription(diagnostic)}
+
+        ## Extracto WordPress si aplica
+
+        {(wordpressApplies ? BuildShortDescription(diagnostic) : "No recomendado: el material todavía no sostiene una publicación web fuerte.")}
+
+        ## Meta descripción si aplica
+
+        {(wordpressApplies ? BuildShortDescription(diagnostic) : "No aplica. Preparar más contexto o material visual antes de publicar en web.")}
+
+        ## Motivo del título elegido
+
+        Se eligió para reflejar el tipo recomendado ({diagnostic.RecommendedType}) sin inflar el alcance del material disponible.
+        """.Trim() + Environment.NewLine;
+    }
+
+    private static string BuildPublicationRecommendationsMarkdown(EditorialDiagnostic diagnostic)
+    {
+        var webRecommended = diagnostic.RecommendedType == "devlog completo";
+        var visualRecommended = diagnostic.VideoCount > 0 || diagnostic.CaptureCount > 0 || diagnostic.RecommendedType == "idea para vídeo";
+        var risk = diagnostic.InformationLevel == "bajo" ? "alto" : diagnostic.InformationLevel == "medio" ? "medio" : "bajo";
+        var platform = diagnostic.RecommendedType switch
+        {
+            "devlog completo" => "Web de AikoGx Studios + Discord + X",
+            "mini devlog" => "Discord/X y mini update web solo si se añade contexto",
+            "solo redes" => "Discord y X",
+            "idea para vídeo" => "TikTok o YouTube Shorts",
+            "nota interna" => "No publicar; uso interno",
+            _ => "No publicar todavía"
+        };
+
+        return $"""
+        # Recomendaciones de publicación
+
+        ## Plataforma recomendada
+
+        {platform}
+
+        ## Orden recomendado de publicación
+
+        {BuildPublicationOrder(diagnostic)}
+
+        ## Categoría WordPress si aplica
+
+        {(webRecommended ? "Devlog / Desarrollo indie" : "WordPress no recomendado todavía.")}
+
+        ## Tags WordPress si aplica
+
+        {(webRecommended ? "Caos Entre Reinos Reborn, AikoGx Studios, devlog, indie game, action RPG" : "No aplica todavía.")}
+
+        ## Hashtags si aplica
+
+        {(diagnostic.RecommendedType is "nota interna" or "no publicar todavía" ? "No aplica todavía." : "#IndieDev #GameDev #Devlog")}
+
+        ## Imagen o vídeo recomendado
+
+        {BuildMediaRecommendation(diagnostic, visualRecommended)}
+
+        ## Riesgo de que se sienta pobre
+
+        {risk}
+
+        ## Qué falta antes de publicar
+
+        {diagnostic.MissingForStrongWebEntry}
         """.Trim() + Environment.NewLine;
     }
 
@@ -878,7 +1019,7 @@ public partial class Form1 : Form
         var path = GetEditorialDiagnosticPath();
         if (!File.Exists(path))
         {
-            var diagnostic = WriteEditorialDiagnostic(output);
+            var diagnostic = WriteEditorialOutputs(output);
             SetRecommendation(diagnostic.RecommendedType);
         }
 
@@ -902,6 +1043,106 @@ public partial class Form1 : Form
     private static string ToTitle(string value)
     {
         return string.IsNullOrWhiteSpace(value) ? "Pendiente" : char.ToUpperInvariant(value[0]) + value[1..];
+    }
+
+    private static List<string> DetectKeywords(string normalized)
+    {
+        var candidates = new[]
+        {
+            "cartas",
+            "eventos",
+            "aguja",
+            "abismo",
+            "nexo",
+            "clases",
+            "enemigos",
+            "combate",
+            "exploración",
+            "nubes",
+            "limón gigante",
+            "visual",
+            "vídeo",
+            "capturas"
+        };
+
+        return candidates
+            .Where(keyword => normalized.Contains(keyword, StringComparison.OrdinalIgnoreCase) || normalized.Contains(RemoveAccentsFallback(keyword), StringComparison.OrdinalIgnoreCase))
+            .Distinct()
+            .ToList();
+    }
+
+    private static string RemoveAccentsFallback(string value)
+    {
+        return value
+            .Replace("ó", "o")
+            .Replace("í", "i")
+            .Replace("á", "a")
+            .Replace("é", "e")
+            .Replace("ú", "u");
+    }
+
+    private static string FormatInlineList(IReadOnlyList<string> items, string empty)
+    {
+        return items.Count == 0 ? empty : string.Join(", ", items);
+    }
+
+    private static string ShortTitle(string text)
+    {
+        var clean = text.ReplaceLineEndings(" ").Trim();
+        if (string.IsNullOrWhiteSpace(clean) || clean.StartsWith("No hay notas", StringComparison.OrdinalIgnoreCase))
+        {
+            return "avance pendiente de concretar";
+        }
+
+        return clean.Length <= 58 ? clean : clean[..58].Trim() + "...";
+    }
+
+    private static string BuildShortDescription(EditorialDiagnostic diagnostic)
+    {
+        return diagnostic.RecommendedType switch
+        {
+            "devlog completo" => "Resumen del avance del día con contexto suficiente para revisar y publicar como devlog.",
+            "mini devlog" => "Avance breve del desarrollo, útil como update corto sin convertirlo en artículo largo.",
+            "solo redes" => "Idea breve con gancho para Discord o X, todavía insuficiente para web.",
+            "idea para vídeo" => "Material o concepto con potencial visual para una pieza corta.",
+            "nota interna" => "Apunte de trabajo que necesita más contexto antes de publicarse.",
+            _ => "Material pendiente de completar antes de publicar."
+        };
+    }
+
+    private static string BuildPublicationOrder(EditorialDiagnostic diagnostic)
+    {
+        return diagnostic.RecommendedType switch
+        {
+            "devlog completo" => "1. Web. 2. Discord. 3. X. 4. Shorts/TikTok si hay material visual.",
+            "mini devlog" => "1. Discord. 2. X. 3. Mini update web solo si se añade contexto o imagen.",
+            "solo redes" => "1. Discord. 2. X. 3. TikTok opcional si se consigue captura o clip.",
+            "idea para vídeo" => "1. Preparar clip. 2. TikTok/Shorts. 3. X o Discord como apoyo.",
+            "nota interna" => "1. Completar contexto. 2. Capturar material. 3. Reanalizar antes de publicar.",
+            _ => "No publicar todavía. Completar notas y material visual primero."
+        };
+    }
+
+    private static string BuildMediaRecommendation(EditorialDiagnostic diagnostic, bool visualRecommended)
+    {
+        if (diagnostic.CaptureCount > 0 && diagnostic.VideoCount > 0)
+        {
+            return "Usar el vídeo como pieza principal y una captura clara como apoyo.";
+        }
+
+        if (diagnostic.VideoCount > 0)
+        {
+            return "Usar el vídeo disponible como base para TikTok o YouTube Shorts.";
+        }
+
+        if (diagnostic.CaptureCount > 0)
+        {
+            return "Usar la captura más clara como imagen principal o apoyo de redes.";
+        }
+
+        return visualRecommended
+            ? "Falta capturar el elemento visual principal antes de publicar."
+            : "No hay imagen o vídeo recomendado todavía.";
     }
 
     private string ReadAllNotes()
@@ -942,6 +1183,8 @@ public partial class Form1 : Form
         var files = Directory.GetFiles(output, "*.md")
             .Where(file => !string.Equals(Path.GetFileName(file), "paquete_para_aiko.md", StringComparison.OrdinalIgnoreCase))
             .Where(file => !string.Equals(Path.GetFileName(file), "diagnostico_editorial.md", StringComparison.OrdinalIgnoreCase))
+            .Where(file => !string.Equals(Path.GetFileName(file), "titulos_y_descripciones.md", StringComparison.OrdinalIgnoreCase))
+            .Where(file => !string.Equals(Path.GetFileName(file), "recomendaciones_publicacion.md", StringComparison.OrdinalIgnoreCase))
             .OrderBy(Path.GetFileName)
             .ToList();
 
