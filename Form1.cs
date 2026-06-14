@@ -1,4 +1,5 @@
 using System.Diagnostics;
+using System.Drawing.Drawing2D;
 using System.Net.Http.Headers;
 using System.Text;
 using System.Text.Json;
@@ -288,9 +289,9 @@ public partial class Form1 : Form
         };
         header.Controls.Add(today);
 
-        header.Controls.Add(MakeHeaderButton("!", new Point(900, 22), () => SetStatus("Notificaciones: pendiente.")));
+        header.Controls.Add(MakeHeaderButton("🔔", new Point(900, 22), () => SetStatus("Notificaciones: no hay avisos nuevos.")));
         header.Controls.Add(MakeHeaderButton("?", new Point(950, 22), () => SetStatus("Ayuda: pega el paquete, analiza y revisa antes de publicar.")));
-        header.Controls.Add(MakeHeaderButton("*", new Point(1000, 22), () => SetStatus("Ajustes: pendiente.")));
+        header.Controls.Add(MakeHeaderButton("⚙", new Point(1000, 22), () => NavigateSidebar("Ajustes")));
         header.Controls.Add(MakeHeaderChip("Modo oscuro", new Point(1050, 24), Color.FromArgb(138, 77, 255)));
         return header;
     }
@@ -306,15 +307,14 @@ public partial class Form1 : Form
 
         var grid = new TableLayoutPanel
         {
-            AutoSize = true,
-            AutoSizeMode = AutoSizeMode.GrowAndShrink,
+            Dock = DockStyle.Top,
             ColumnCount = 2,
             RowCount = 4,
-            Width = 1180,
+            Height = 1055,
             BackColor = BackColor
         };
-        grid.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, 760F));
-        grid.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, 400F));
+        grid.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 66F));
+        grid.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 34F));
         grid.RowStyles.Add(new RowStyle(SizeType.Absolute, 145F));
         grid.RowStyles.Add(new RowStyle(SizeType.Absolute, 300F));
         grid.RowStyles.Add(new RowStyle(SizeType.Absolute, 250F));
@@ -367,7 +367,7 @@ public partial class Form1 : Form
         var card = MakePremiumCard(new Padding(16));
         card.Controls.Add(new Label
         {
-            Text = "Recomendacion de Aiko",
+            Text = "✦ Recomendacion de Aiko",
             AutoSize = true,
             Font = new Font("Segoe UI", 13F, FontStyle.Bold),
             ForeColor = Color.FromArgb(88, 243, 255),
@@ -381,9 +381,9 @@ public partial class Form1 : Form
         card.Controls.Add(_recommendationLabel);
         _publicationStateLabel = new Label
         {
-            Text = "Tipo recomendado: pendiente",
+            Text = "Plataforma recomendada: pendiente",
             AutoSize = false,
-            Size = new Size(350, 30),
+            Size = new Size(350, 28),
             Font = new Font("Segoe UI", 10F, FontStyle.Bold),
             ForeColor = Color.FromArgb(255, 209, 102),
             Location = new Point(18, 46)
@@ -401,7 +401,7 @@ public partial class Form1 : Form
         card.Controls.Add(_aikoRecommendationDetailLabel);
         _nextStepLabel = new Label
         {
-            Text = "Siguiente paso: Analizar con Aiko.",
+            Text = "Idea destacada: completa el paquete y revisa contexto.",
             AutoSize = false,
             Size = new Size(350, 28),
             Font = new Font("Segoe UI", 9F, FontStyle.Bold),
@@ -458,8 +458,11 @@ public partial class Form1 : Form
     {
         var card = MakePremiumCard(new Padding(14));
         card.Controls.Add(new Label { Text = "Progreso semanal", AutoSize = true, Font = new Font("Segoe UI", 12F, FontStyle.Bold), ForeColor = Color.FromArgb(244, 247, 255), Location = new Point(14, 10) });
-        card.Controls.Add(new Label { Text = "Objetivo videos: 0/2", AutoSize = true, Font = new Font("Segoe UI", 18F, FontStyle.Bold), ForeColor = Color.FromArgb(98, 255, 180), Location = new Point(16, 46) });
-        card.Controls.Add(new Label { Text = "L  M  X  J  V  S  D\n-  -  -  -  -  -  -", AutoSize = true, Font = new Font("Consolas", 10F, FontStyle.Bold), ForeColor = Color.FromArgb(174, 184, 217), Location = new Point(18, 90) });
+        var progress = MakeCircularProgressPanel(0, 2);
+        progress.Location = new Point(16, 42);
+        card.Controls.Add(progress);
+        card.Controls.Add(new Label { Text = "Objetivo: 2 videos\n0/2 completados\nPequeño avance, paso firme.", AutoSize = false, Size = new Size(185, 78), Font = new Font("Segoe UI", 9F, FontStyle.Bold), ForeColor = Color.FromArgb(174, 184, 217), Location = new Point(118, 48) });
+        card.Controls.Add(new Label { Text = "L  M  X  J  V  S  D\n○  ○  ○  ○  ○  ○  ○", AutoSize = true, Font = new Font("Consolas", 10F, FontStyle.Bold), ForeColor = Color.FromArgb(98, 255, 180), Location = new Point(18, 122) });
         return card;
     }
 
@@ -467,7 +470,10 @@ public partial class Form1 : Form
     {
         var card = MakePremiumCard(new Padding(14));
         card.Controls.Add(new Label { Text = "Distribucion de contenido", AutoSize = true, Font = new Font("Segoe UI", 12F, FontStyle.Bold), ForeColor = Color.FromArgb(244, 247, 255), Location = new Point(14, 10) });
-        card.Controls.Add(new Label { Text = "TikTok / Shorts  35%\nDiscord          25%\nDevlog           20%\nX                15%\nitch.io           5%", AutoSize = true, Font = new Font("Consolas", 9.5F), ForeColor = Color.FromArgb(174, 184, 217), Location = new Point(18, 44) });
+        var donut = MakeDonutChartPanel();
+        donut.Location = new Point(16, 42);
+        card.Controls.Add(donut);
+        card.Controls.Add(new Label { Text = "■ TikTok / Shorts 35%\n■ Discord 25%\n■ Devlog 20%\n■ X 15%\n■ itch.io 5%", AutoSize = false, Size = new Size(190, 105), Font = new Font("Segoe UI", 8.5F, FontStyle.Bold), ForeColor = Color.FromArgb(174, 184, 217), Location = new Point(138, 44) });
         return card;
     }
 
@@ -500,7 +506,10 @@ public partial class Form1 : Form
         actions.Controls.Add(MakeButton("Generar Content Bank", GenerateContentBankIdeas));
         card.Controls.Add(actions);
         card.Controls.Add(new Label { Text = "Para hacer hoy (4)", AutoSize = true, Font = new Font("Segoe UI", 12F, FontStyle.Bold), ForeColor = Color.FromArgb(255, 79, 216), Location = new Point(16, 208) });
-        card.Controls.Add(new Label { Text = "[ ] Alta  Pegar paquete completo\n[ ] Alta  Analizar con Aiko\n[ ] Media Revisar recomendacion\n[ ] Baja  Copiar resultado final", AutoSize = false, Size = new Size(360, 120), Font = new Font("Consolas", 9.5F), ForeColor = Color.FromArgb(174, 184, 217), Location = new Point(18, 242) });
+        card.Controls.Add(MakeTaskCheckBox("Pegar paquete completo", "Alta", Color.FromArgb(255, 103, 103), new Point(18, 242)));
+        card.Controls.Add(MakeTaskCheckBox("Analizar con Aiko", "Alta", Color.FromArgb(255, 103, 103), new Point(18, 274)));
+        card.Controls.Add(MakeTaskCheckBox("Revisar recomendacion", "Media", Color.FromArgb(255, 209, 102), new Point(18, 306)));
+        card.Controls.Add(MakeTaskCheckBox("Copiar resultado final", "Baja", Color.FromArgb(98, 255, 180), new Point(18, 338)));
         return card;
     }
 
@@ -559,7 +568,139 @@ public partial class Form1 : Form
         button.Width = 40;
         button.Height = 34;
         button.Location = location;
+        button.Font = new Font("Segoe UI", 12F, FontStyle.Bold);
         return button;
+    }
+
+    private Panel MakeCircularProgressPanel(int value, int goal)
+    {
+        var panel = new Panel { Size = new Size(88, 88), BackColor = Color.Transparent };
+        panel.Paint += (_, e) =>
+        {
+            e.Graphics.SmoothingMode = SmoothingMode.AntiAlias;
+            var rect = new Rectangle(8, 8, 70, 70);
+            using var basePen = new Pen(Color.FromArgb(38, 48, 82), 9);
+            using var progressPen = new Pen(Color.FromArgb(138, 77, 255), 9);
+            e.Graphics.DrawArc(basePen, rect, -90, 360);
+            var sweep = goal <= 0 ? 0 : Math.Min(360, (int)(360F * value / goal));
+            e.Graphics.DrawArc(progressPen, rect, -90, sweep);
+            TextRenderer.DrawText(e.Graphics, $"{value}/{goal}", new Font("Segoe UI", 12F, FontStyle.Bold), rect, Color.FromArgb(244, 247, 255), TextFormatFlags.HorizontalCenter | TextFormatFlags.VerticalCenter);
+        };
+        return panel;
+    }
+
+    private Panel MakeDonutChartPanel()
+    {
+        var panel = new Panel { Size = new Size(108, 108), BackColor = Color.Transparent };
+        panel.Paint += (_, e) =>
+        {
+            e.Graphics.SmoothingMode = SmoothingMode.AntiAlias;
+            var rect = new Rectangle(8, 8, 88, 88);
+            var values = new[] { 35, 25, 20, 15, 5 };
+            var colors = new[]
+            {
+                Color.FromArgb(88, 243, 255),
+                Color.FromArgb(138, 77, 255),
+                Color.FromArgb(255, 79, 216),
+                Color.FromArgb(60, 123, 255),
+                Color.FromArgb(98, 255, 180)
+            };
+            var start = -90F;
+            for (var i = 0; i < values.Length; i++)
+            {
+                using var brush = new SolidBrush(colors[i]);
+                var sweep = values[i] * 3.6F;
+                e.Graphics.FillPie(brush, rect, start, sweep);
+                start += sweep;
+            }
+            using var center = new SolidBrush(Color.FromArgb(18, 24, 42));
+            e.Graphics.FillEllipse(center, new Rectangle(31, 31, 42, 42));
+        };
+        return panel;
+    }
+
+    private Panel MakeTaskCheckBox(string text, string priority, Color priorityColor, Point location)
+    {
+        var panel = new Panel { Size = new Size(350, 28), Location = location, BackColor = Color.Transparent };
+        var check = new CheckBox
+        {
+            Text = text,
+            AutoSize = true,
+            ForeColor = Color.FromArgb(244, 247, 255),
+            Font = new Font("Segoe UI", 9F),
+            Location = new Point(0, 3),
+            BackColor = Color.Transparent
+        };
+        var tag = new Label
+        {
+            Text = priority,
+            AutoSize = false,
+            Size = new Size(58, 22),
+            BackColor = priorityColor,
+            ForeColor = Color.FromArgb(7, 9, 20),
+            Font = new Font("Segoe UI", 8F, FontStyle.Bold),
+            TextAlign = ContentAlignment.MiddleCenter,
+            Location = new Point(250, 2)
+        };
+        panel.Controls.Add(check);
+        panel.Controls.Add(tag);
+        return panel;
+    }
+
+    private void NavigateSidebar(string section)
+    {
+        switch (section)
+        {
+            case "Inicio":
+                SetStatus("Inicio: dashboard general visible.");
+                break;
+            case "Notas del Dia":
+                _aikoPackageInputBox.Focus();
+                SetStatus("Notas del Dia: pega o escribe el paquete principal.");
+                break;
+            case "Devlogs":
+                PrepareContent();
+                SetStatus("Devlogs: borrador base generado para revisar.");
+                break;
+            case "Discord":
+                CopyOutput("post_discord.md");
+                break;
+            case "X (Twitter)":
+            case "X":
+                CopyOutput("post_x.md");
+                break;
+            case "TikTok / Shorts":
+                GenerateContentBankIdeas();
+                SetStatus("TikTok / Shorts: ideas generadas en Banco de ideas.");
+                break;
+            case "itch.io":
+                SetStatus("itch.io: preparar copia manual desde los borradores generados.");
+                break;
+            case "Ideas / Content Bank":
+            case "Banco de ideas":
+                GenerateContentBankIdeas();
+                OpenContentBankFolder();
+                break;
+            case "Tareas":
+                SetStatus("Tareas: revisa la checklist Para hacer hoy.");
+                break;
+            case "Calendario":
+                SetStatus("Calendario: vista pendiente, sin automatizaciones.");
+                break;
+            case "Archivos y Material":
+            case "Material":
+                OpenFolder(_dayPath);
+                break;
+            case "Estado del Proyecto":
+                SetStatus("Estado del Proyecto: Caos Entre Reinos activo.");
+                break;
+            case "Ajustes":
+                OpenFolder(Path.Combine(_dataRoot, "Config"));
+                break;
+            default:
+                SetStatus(section + ": seccion pendiente.");
+                break;
+        }
     }
 
     private void BuildPremiumDashboardUi()
@@ -1668,7 +1809,7 @@ public partial class Form1 : Form
 
     private Button MakeSidebarButton(string text)
     {
-        var button = MakeButton(text, () => SetStatus(text + " preparado como seccion visual del dashboard."));
+        var button = MakeButton(text, () => NavigateSidebar(text));
         button.Width = 198;
         button.Height = 34;
         button.TextAlign = ContentAlignment.MiddleLeft;
@@ -4074,21 +4215,26 @@ public partial class Form1 : Form
         var diagnostic = CreateEditorialDiagnostic();
         return $"""
         RESUMEN DEL DIA
+        ----------------
         {diagnostic.Summary}
 
         MATERIAL DETECTADO
+        ------------------
         - Notas: {diagnostic.NoteCount}
         - Capturas: {diagnostic.CaptureCount}
         - Videos: {diagnostic.VideoCount}
         - Nivel de informacion: {diagnostic.InformationLevel}
 
         RECOMENDACION
+        -------------
         {ToTitle(diagnostic.RecommendedType)}
 
         MOTIVO
+        ------
         {diagnostic.Reason}
 
         QUE FALTA ANTES DE PUBLICAR
+        ---------------------------
         {diagnostic.MissingForStrongWebEntry}
         """.Trim();
     }
