@@ -20,4 +20,10 @@
     </Content>
   </ItemGroup>
 
+  <ItemGroup>
+    <PackageReference Include="FontAwesome.Sharp" Version="6.6.0" />
+    <PackageReference Include="Krypton.Toolkit" Version="105.26.4.110" />
+    <PackageReference Include="ReaLTaiizor" Version="3.8.1.8" />
+  </ItemGroup>
+
 </Project>
