@@ -347,19 +347,38 @@ public partial class Form1 : Form
         {
             Text = _currentDay + "  |  Buen dia para convertir notas en contenido claro.",
             AutoSize = false,
-            Size = new Size(450, 42),
+            Size = new Size(390, 42),
             Font = new Font("Segoe UI", 10F, FontStyle.Bold),
             ForeColor = Color.FromArgb(244, 247, 255),
             BackColor = Color.FromArgb(24, 33, 58),
             TextAlign = ContentAlignment.MiddleCenter,
-            Location = new Point(420, 20)
+            Location = new Point(390, 20),
+            AutoEllipsis = true
         };
         header.Controls.Add(today);
 
-        header.Controls.Add(MakeHeaderButton("Avisos", new Point(850, 22), () => SetStatus("Notificaciones: no hay avisos nuevos.")));
-        header.Controls.Add(MakeHeaderButton("Ayuda", new Point(948, 22), ShowUsageGuide));
-        header.Controls.Add(MakeHeaderButton("Ajustes", new Point(1046, 22), () => NavigateSidebar("Ajustes")));
+        var alerts = MakeHeaderButton("Avisos", new Point(0, 22), () => SetStatus("Notificaciones: no hay avisos nuevos."));
+        var help = MakeHeaderButton("Ayuda", new Point(0, 22), ShowUsageGuide);
+        var settings = MakeHeaderButton("Ajustes", new Point(0, 22), () => NavigateSidebar("Ajustes"));
+        header.Controls.Add(alerts);
+        header.Controls.Add(help);
+        header.Controls.Add(settings);
+        header.Resize += (_, _) => LayoutCompleteHeader(header, today, alerts, help, settings);
+        LayoutCompleteHeader(header, today, alerts, help, settings);
         return header;
+    }
+
+    private static void LayoutCompleteHeader(Control header, Label today, Button alerts, Button help, Button settings)
+    {
+        var right = Math.Max(760, header.ClientSize.Width - 18);
+        settings.Location = new Point(right - settings.Width, 22);
+        help.Location = new Point(settings.Left - help.Width - 8, 22);
+        alerts.Location = new Point(help.Left - alerts.Width - 8, 22);
+
+        var leftEdge = 390;
+        var maxWidth = alerts.Left - leftEdge - 18;
+        today.Location = new Point(leftEdge, 20);
+        today.Width = Math.Max(220, maxWidth);
     }
 
     private Control BuildCompleteHome()
@@ -494,7 +513,7 @@ public partial class Form1 : Form
         {
             Text = "Plataforma recomendada: pendiente",
             AutoSize = false,
-            Size = new Size(350, 28),
+            Size = new Size(350, 30),
             Font = new Font("Segoe UI", 10F, FontStyle.Bold),
             ForeColor = Color.FromArgb(255, 209, 102),
             Location = new Point(18, 46)
@@ -504,27 +523,23 @@ public partial class Form1 : Form
         {
             Text = "Motivo: pega o escribe material y analiza.",
             AutoSize = false,
-            Size = new Size(350, 34),
+            Size = new Size(350, 42),
             Font = new Font("Segoe UI", 9F),
             ForeColor = Color.FromArgb(174, 184, 217),
-            Location = new Point(18, 76)
+            Location = new Point(18, 80)
         };
         card.Controls.Add(_aikoRecommendationDetailLabel);
         _nextStepLabel = new Label
         {
             Text = "Idea destacada: completa el paquete y revisa contexto.",
             AutoSize = false,
-            Size = new Size(350, 28),
+            Size = new Size(350, 42),
             Font = new Font("Segoe UI", 9F, FontStyle.Bold),
             ForeColor = Color.FromArgb(255, 79, 216),
-            Location = new Point(18, 108)
+            Location = new Point(18, 124)
         };
         card.Controls.Add(_nextStepLabel);
-        _recommendedActionButton = MakeButton("Ver idea completa", ExecuteRecommendedAction, true);
-        _recommendedActionButton.Width = 175;
-        _recommendedActionButton.Height = 34;
-        _recommendedActionButton.Location = new Point(205, 102);
-        card.Controls.Add(_recommendedActionButton);
+        _recommendedActionButton = new Button { Visible = false };
         return card;
     }
 
@@ -606,22 +621,21 @@ public partial class Form1 : Form
     private Panel BuildQuickActionsAndTasksPanel()
     {
         var card = MakePremiumCard(new Padding(16));
-        card.AutoScroll = true;
+        card.AutoScroll = false;
         card.Controls.Add(new Label { Text = "Acciones rapidas", AutoSize = true, Font = new Font("Segoe UI", 13F, FontStyle.Bold), ForeColor = Color.FromArgb(244, 247, 255), Location = new Point(16, 10) });
-        var actions = MakeButtonPanel(new Point(16, 44), new Size(350, 150));
-        actions.AutoScroll = true;
-        actions.Controls.Add(MakeButton("Nueva nota", SaveNotes, true));
-        actions.Controls.Add(MakeButton("Nuevo devlog", PrepareContent));
-        actions.Controls.Add(MakeButton("Nueva idea", GenerateContentBankIdeas));
-        actions.Controls.Add(MakeButton("Agregar captura", ImportCaptures));
-        actions.Controls.Add(MakeButton("Agregar video", ImportVideos));
-        actions.Controls.Add(MakeButton("Generar Content Bank", GenerateContentBankIdeas));
+        var actions = MakeButtonPanel(new Point(16, 42), new Size(350, 132));
+        actions.AutoScroll = false;
+        actions.Controls.Add(MakeDashboardActionButton("Nueva nota", SaveNotes, true));
+        actions.Controls.Add(MakeDashboardActionButton("Nuevo devlog", PrepareContent));
+        actions.Controls.Add(MakeDashboardActionButton("Nueva idea", GenerateContentBankIdeas));
+        actions.Controls.Add(MakeDashboardActionButton("Agregar captura", ImportCaptures));
+        actions.Controls.Add(MakeDashboardActionButton("Agregar video", ImportVideos));
+        actions.Controls.Add(MakeDashboardActionButton("Content Bank", GenerateContentBankIdeas));
         card.Controls.Add(actions);
-        card.Controls.Add(new Label { Text = "Para hacer hoy (4)", AutoSize = true, Font = new Font("Segoe UI", 12F, FontStyle.Bold), ForeColor = Color.FromArgb(255, 79, 216), Location = new Point(16, 208) });
-        card.Controls.Add(MakeTaskCheckBox("Pegar paquete completo", "Alta", Color.FromArgb(255, 103, 103), new Point(18, 242)));
-        card.Controls.Add(MakeTaskCheckBox("Analizar con Aiko", "Alta", Color.FromArgb(255, 103, 103), new Point(18, 274)));
-        card.Controls.Add(MakeTaskCheckBox("Revisar recomendacion", "Media", Color.FromArgb(255, 209, 102), new Point(18, 306)));
-        card.Controls.Add(MakeTaskCheckBox("Copiar resultado final", "Baja", Color.FromArgb(98, 255, 180), new Point(18, 338)));
+        card.Controls.Add(new Label { Text = "Para hacer hoy (3)", AutoSize = true, Font = new Font("Segoe UI", 12F, FontStyle.Bold), ForeColor = Color.FromArgb(255, 79, 216), Location = new Point(16, 188) });
+        card.Controls.Add(MakeTaskCheckBox("Pegar paquete completo", "Alta", Color.FromArgb(255, 103, 103), new Point(18, 218)));
+        card.Controls.Add(MakeTaskCheckBox("Analizar con Aiko", "Alta", Color.FromArgb(255, 103, 103), new Point(18, 248)));
+        card.Controls.Add(MakeTaskCheckBox("Revisar recomendacion", "Media", Color.FromArgb(255, 209, 102), new Point(18, 278)));
         return card;
     }
 
@@ -646,8 +660,8 @@ public partial class Form1 : Form
     private Panel BuildLatestItemsCard()
     {
         var card = MakePremiumCard(new Padding(16));
-        card.Controls.Add(new Label { Text = "Ultimos elementos", AutoSize = true, Font = new Font("Segoe UI", 13F, FontStyle.Bold), ForeColor = Color.FromArgb(244, 247, 255), Location = new Point(16, 10) });
-        card.Controls.Add(new Label { Text = "Ahora  Nota rapida guardada\nHoy    Diagnostico pendiente\nHoy    Content Bank local\nHoy    WordPress draft seguro", AutoSize = false, Size = new Size(350, 150), Font = new Font("Consolas", 9.5F), ForeColor = Color.FromArgb(174, 184, 217), Location = new Point(18, 48) });
+        card.Controls.Add(new Label { Text = "Ultimos elementos", AutoSize = true, Font = new Font("Segoe UI", 12F, FontStyle.Bold), ForeColor = Color.FromArgb(174, 184, 217), Location = new Point(16, 70) });
+        card.Controls.Add(new Label { Text = "Ahora  Nota rapida guardada\nHoy    Diagnostico pendiente\nHoy    Content Bank local\nHoy    WordPress draft seguro", AutoSize = false, Size = new Size(350, 112), Font = new Font("Consolas", 9.2F), ForeColor = Color.FromArgb(174, 184, 217), Location = new Point(18, 104) });
         return card;
     }
 
@@ -809,6 +823,24 @@ public partial class Form1 : Form
         panel.Controls.Add(check);
         panel.Controls.Add(tag);
         return panel;
+    }
+
+    private Button MakeDashboardActionButton(string text, Action action, bool primary = false)
+    {
+        var button = MakeButton(text, action, primary);
+        button.Width = 158;
+        button.Height = 36;
+        button.AutoSize = false;
+        button.TextAlign = ContentAlignment.MiddleLeft;
+        if (button is IconButton iconButton)
+        {
+            iconButton.TextAlign = ContentAlignment.MiddleLeft;
+            iconButton.ImageAlign = ContentAlignment.MiddleLeft;
+            iconButton.TextImageRelation = TextImageRelation.ImageBeforeText;
+            iconButton.IconSize = 15;
+        }
+
+        return button;
     }
 
     private void NavigateSidebar(string section)
