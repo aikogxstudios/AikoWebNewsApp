@@ -26,6 +26,15 @@ public partial class Form1 : Form
     private Label _aikoRecommendationDetailLabel = null!;
     private Label _nextStepLabel = null!;
     private Button _recommendedActionButton = null!;
+    private Label _nextStepNotesChip = null!;
+    private Label _nextStepMaterialChip = null!;
+    private Label _nextStepAnalysisChip = null!;
+    private Label _nextStepResultChip = null!;
+    private Label _nextStepDraftChip = null!;
+    private Label _nextStepCompletedLabel = null!;
+    private Label _nextStepNowLabel = null!;
+    private Button _nextStepPrimaryButton = null!;
+    private Action _nextStepPrimaryAction = null!;
     private TextBox _previewWeb = null!;
     private TextBox _previewDiscord = null!;
     private TextBox _previewX = null!;
@@ -366,12 +375,12 @@ public partial class Form1 : Form
             Dock = DockStyle.Top,
             ColumnCount = 2,
             RowCount = 4,
-            Height = 1055,
+            Height = 1080,
             BackColor = BackColor
         };
         grid.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 66F));
         grid.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 34F));
-        grid.RowStyles.Add(new RowStyle(SizeType.Absolute, 145F));
+        grid.RowStyles.Add(new RowStyle(SizeType.Absolute, 170F));
         grid.RowStyles.Add(new RowStyle(SizeType.Absolute, 300F));
         grid.RowStyles.Add(new RowStyle(SizeType.Absolute, 250F));
         grid.RowStyles.Add(new RowStyle(SizeType.Absolute, 360F));
@@ -394,27 +403,72 @@ public partial class Form1 : Form
         var card = MakePremiumCard(new Padding(16));
         card.Controls.Add(new Label
         {
-            Text = "Flujo de trabajo diario",
+            Text = "Siguiente paso recomendado",
             AutoSize = true,
-            Font = new Font("Segoe UI", 13F, FontStyle.Bold),
+            Font = new Font("Segoe UI", 16F, FontStyle.Bold),
             ForeColor = Color.FromArgb(244, 247, 255),
-            Location = new Point(16, 10)
+            Location = new Point(16, 8)
         });
 
-        var flow = new FlowLayoutPanel
+        card.Controls.Add(new Label
         {
-            Location = new Point(16, 46),
-            Size = new Size(720, 76),
+            Text = "Estado de hoy:",
+            AutoSize = true,
+            Font = new Font("Segoe UI", 9F, FontStyle.Bold),
+            ForeColor = Color.FromArgb(174, 184, 217),
+            Location = new Point(18, 46)
+        });
+
+        var chips = new FlowLayoutPanel
+        {
+            Location = new Point(112, 41),
+            Size = new Size(600, 34),
             FlowDirection = FlowDirection.LeftToRight,
-            WrapContents = false,
+            WrapContents = true,
             BackColor = Color.Transparent
         };
-        flow.Controls.Add(MakeFlowStep("1", "Capturar", "Notas/material", SaveNotes));
-        flow.Controls.Add(MakeFlowStep("2", "Organizar", "Contexto", OrganizeDeveloperNotes));
-        flow.Controls.Add(MakeFlowStep("3", "Recomendar", "Formato", AnalyzeWithAiko, true));
-        flow.Controls.Add(MakeFlowStep("4", "Crear", "Borrador", GenerateAikoPackage));
-        flow.Controls.Add(MakeFlowStep("5", "Revisar", "Manual seguro", OpenManualWordPressDraft));
-        card.Controls.Add(flow);
+        chips.HorizontalScroll.Enabled = false;
+        chips.HorizontalScroll.Visible = false;
+        _nextStepNotesChip = MakeNextStepChip("Notas: No", false);
+        _nextStepMaterialChip = MakeNextStepChip("Material: No", false);
+        _nextStepAnalysisChip = MakeNextStepChip("Analisis: No", false);
+        _nextStepResultChip = MakeNextStepChip("Resultado: No", false);
+        _nextStepDraftChip = MakeNextStepChip("Draft: Seguro", true);
+        chips.Controls.Add(_nextStepNotesChip);
+        chips.Controls.Add(_nextStepMaterialChip);
+        chips.Controls.Add(_nextStepAnalysisChip);
+        chips.Controls.Add(_nextStepResultChip);
+        chips.Controls.Add(_nextStepDraftChip);
+        card.Controls.Add(chips);
+
+        _nextStepCompletedLabel = new Label
+        {
+            Text = "Fase completada: pendiente de notas",
+            AutoSize = false,
+            Size = new Size(700, 24),
+            Font = new Font("Segoe UI", 9F, FontStyle.Bold),
+            ForeColor = Color.FromArgb(88, 243, 255),
+            Location = new Point(18, 82)
+        };
+        card.Controls.Add(_nextStepCompletedLabel);
+
+        _nextStepNowLabel = new Label
+        {
+            Text = "Ahora toca: escribe o pega una nota del dia.",
+            AutoSize = false,
+            Size = new Size(480, 42),
+            Font = new Font("Segoe UI", 11F, FontStyle.Bold),
+            ForeColor = Color.FromArgb(255, 79, 216),
+            Location = new Point(18, 108)
+        };
+        card.Controls.Add(_nextStepNowLabel);
+
+        _nextStepPrimaryAction = () => ShowSidebarSection("Notas del Dia", true);
+        _nextStepPrimaryButton = MakeButton("Ir a Notas del Dia", ExecuteNextStepPrimaryAction, true);
+        _nextStepPrimaryButton.Width = 210;
+        _nextStepPrimaryButton.Height = 42;
+        _nextStepPrimaryButton.Location = new Point(505, 108);
+        card.Controls.Add(_nextStepPrimaryButton);
         return card;
     }
 
@@ -627,6 +681,39 @@ public partial class Form1 : Form
         button.Location = location;
         button.Font = new Font("Segoe UI", 9F, FontStyle.Bold);
         return button;
+    }
+
+    private static Label MakeNextStepChip(string text, bool ready)
+    {
+        return new Label
+        {
+            Text = text,
+            AutoSize = false,
+            Size = new Size(108, 26),
+            Margin = new Padding(0, 0, 7, 5),
+            Font = new Font("Segoe UI", 8F, FontStyle.Bold),
+            TextAlign = ContentAlignment.MiddleCenter,
+            BackColor = ready ? Color.FromArgb(26, 74, 60) : Color.FromArgb(48, 38, 68),
+            ForeColor = ready ? Color.FromArgb(98, 255, 180) : Color.FromArgb(255, 209, 102),
+            BorderStyle = BorderStyle.FixedSingle
+        };
+    }
+
+    private static void SetNextStepChip(Label? chip, string title, bool ready)
+    {
+        if (chip is null || chip.IsDisposed)
+        {
+            return;
+        }
+
+        chip.Text = title + ": " + (ready ? "Si" : "No");
+        chip.BackColor = ready ? Color.FromArgb(26, 74, 60) : Color.FromArgb(48, 38, 68);
+        chip.ForeColor = ready ? Color.FromArgb(98, 255, 180) : Color.FromArgb(255, 209, 102);
+    }
+
+    private void ExecuteNextStepPrimaryAction()
+    {
+        (_nextStepPrimaryAction ?? (() => ShowSidebarSection("Notas del Dia", true))).Invoke();
     }
 
     private void ShowUsageGuide()
@@ -3751,6 +3838,7 @@ public partial class Form1 : Form
         var diagnosticReady = File.Exists(Path.Combine(output, "diagnostico_editorial.md"));
         var packageReady = File.Exists(GetAikoPackagePath());
         var responseReady = File.Exists(Path.Combine(output, "respuesta_aiko.md"));
+        var contentBankReady = HasContentBankIdeas();
         var wordpressReady = File.Exists(Path.Combine(output, "wordpress_borrador_manual.md")) || File.Exists(Path.Combine(output, "wordpress_borrador_resultado.md"));
 
         SetMetricState(_notesStateLabel, notesReady ? "Listo" : "Pendiente", notesReady);
@@ -3760,6 +3848,7 @@ public partial class Form1 : Form
         SetMetricState(_aikoPackageStateLabel, packageReady ? "Listo" : "Pendiente", packageReady);
         SetMetricState(_aikoResponseStateLabel, responseReady ? "Listo" : "Pendiente", responseReady);
         SetMetricState(_wordpressStateLabel, wordpressReady ? "Draft listo" : "Pendiente", wordpressReady);
+        UpdateRecommendedNextStep(notesReady, captures > 0 || videos > 0, diagnosticReady, packageReady, responseReady, contentBankReady, wordpressReady);
 
         var recommendation = GetCurrentRecommendationKey();
 
@@ -3818,6 +3907,91 @@ public partial class Form1 : Form
                 _ => "Analizar con Aiko"
             };
         }
+    }
+
+    private void UpdateRecommendedNextStep(bool notesReady, bool materialReady, bool diagnosticReady, bool packageReady, bool responseReady, bool contentBankReady, bool wordpressReady)
+    {
+        if (_nextStepCompletedLabel is null
+            || _nextStepCompletedLabel.IsDisposed
+            || _nextStepNowLabel is null
+            || _nextStepNowLabel.IsDisposed
+            || _nextStepPrimaryButton is null
+            || _nextStepPrimaryButton.IsDisposed)
+        {
+            return;
+        }
+
+        SetNextStepChip(_nextStepNotesChip, "Notas", notesReady);
+        SetNextStepChip(_nextStepMaterialChip, "Material", materialReady);
+        SetNextStepChip(_nextStepAnalysisChip, "Analisis", diagnosticReady);
+        SetNextStepChip(_nextStepResultChip, "Resultado", responseReady);
+        SetNextStepChip(_nextStepDraftChip, "Draft", wordpressReady);
+
+        string completed;
+        string now;
+        string button;
+        Action action;
+
+        if (!notesReady)
+        {
+            completed = "Fase completada: ninguna todavia";
+            now = "Ahora toca: escribe o pega una nota del dia.";
+            button = "Ir a Notas del Dia";
+            action = () => ShowSidebarSection("Notas del Dia", true);
+        }
+        else if (!diagnosticReady)
+        {
+            completed = "Fase completada: notas guardadas";
+            now = "Ahora toca: analizar las notas con Aiko.";
+            button = "Analizar con Aiko";
+            action = AnalyzeWithAiko;
+        }
+        else if (!packageReady)
+        {
+            completed = "Fase completada: analisis listo";
+            now = "Ahora toca: revisar la recomendacion y generar paquete para Aiko.";
+            button = "Generar paquete para Aiko";
+            action = GenerateAikoPackage;
+        }
+        else if (!responseReady)
+        {
+            completed = "Fase completada: paquete para Aiko generado";
+            now = "Ahora toca: pegar el paquete en Aiko y guardar la respuesta.";
+            button = "Copiar paquete para Aiko";
+            action = CopyAikoPackage;
+        }
+        else if (!contentBankReady)
+        {
+            completed = "Fase completada: respuesta de Aiko guardada";
+            now = "Ahora toca: guardar ideas utiles en Content Bank o preparar borrador.";
+            button = "Generar Content Bank";
+            action = GenerateContentBankIdeas;
+        }
+        else if (!wordpressReady)
+        {
+            completed = "Fase completada: Content Bank listo";
+            now = "Ahora toca: preparar un borrador WordPress seguro en draft.";
+            button = "Crear borrador draft";
+            action = CreateWordPressDraft;
+        }
+        else
+        {
+            completed = "Fase completada: borrador WordPress draft listo";
+            now = "Ahora toca: revisar manualmente antes de publicar fuera de la app.";
+            button = "Abrir carpeta Salida";
+            action = () => OpenFolder(Path.Combine(_dayPath, "Salida"));
+        }
+
+        _nextStepCompletedLabel.Text = completed;
+        _nextStepNowLabel.Text = now;
+        _nextStepPrimaryButton.Text = button;
+        _nextStepPrimaryAction = action;
+    }
+
+    private bool HasContentBankIdeas()
+    {
+        var folder = GetContentBankFolder();
+        return Directory.Exists(folder) && Directory.GetFiles(folder, "*.md").Any();
     }
 
     private static void SetMetricState(Label label, string text, bool ready)
