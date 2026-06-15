@@ -409,9 +409,10 @@ public partial class Form1 : Form
         grid.Controls.Add(BuildWorkflowOverviewCard(), 0, 0);
         grid.Controls.Add(BuildRecommendationSummaryCard(), 1, 0);
         grid.Controls.Add(BuildDashboardSummaryGrid(), 0, 1);
-        grid.Controls.Add(BuildQuickActionsAndTasksPanel(), 1, 1);
+        var rightPanel = BuildQuickActionsAndTasksPanel();
+        grid.Controls.Add(rightPanel, 1, 1);
+        grid.SetRowSpan(rightPanel, 2);
         grid.Controls.Add(BuildPackageInputCard(), 0, 2);
-        grid.Controls.Add(BuildLatestItemsCard(), 1, 2);
         var previewArea = BuildPreviewAreaCard();
         grid.Controls.Add(previewArea, 0, 3);
         grid.SetColumnSpan(previewArea, 2);
@@ -622,21 +623,95 @@ public partial class Form1 : Form
     {
         var card = MakePremiumCard(new Padding(16));
         card.AutoScroll = false;
-        card.Controls.Add(new Label { Text = "Acciones rapidas", AutoSize = true, Font = new Font("Segoe UI", 13F, FontStyle.Bold), ForeColor = Color.FromArgb(244, 247, 255), Location = new Point(16, 10) });
-        var actions = MakeButtonPanel(new Point(16, 42), new Size(350, 132));
-        actions.AutoScroll = false;
-        actions.Controls.Add(MakeDashboardActionButton("Nueva nota", SaveNotes, true));
-        actions.Controls.Add(MakeDashboardActionButton("Nuevo devlog", PrepareContent));
-        actions.Controls.Add(MakeDashboardActionButton("Nueva idea", GenerateContentBankIdeas));
-        actions.Controls.Add(MakeDashboardActionButton("Agregar captura", ImportCaptures));
-        actions.Controls.Add(MakeDashboardActionButton("Agregar video", ImportVideos));
-        actions.Controls.Add(MakeDashboardActionButton("Content Bank", GenerateContentBankIdeas));
-        card.Controls.Add(actions);
-        card.Controls.Add(new Label { Text = "Para hacer hoy (3)", AutoSize = true, Font = new Font("Segoe UI", 12F, FontStyle.Bold), ForeColor = Color.FromArgb(255, 79, 216), Location = new Point(16, 188) });
-        card.Controls.Add(MakeTaskCheckBox("Pegar paquete completo", "Alta", Color.FromArgb(255, 103, 103), new Point(18, 218)));
-        card.Controls.Add(MakeTaskCheckBox("Analizar con Aiko", "Alta", Color.FromArgb(255, 103, 103), new Point(18, 248)));
-        card.Controls.Add(MakeTaskCheckBox("Revisar recomendacion", "Media", Color.FromArgb(255, 209, 102), new Point(18, 278)));
+
+        var layout = new TableLayoutPanel
+        {
+            Dock = DockStyle.Fill,
+            ColumnCount = 1,
+            RowCount = 4,
+            BackColor = Color.Transparent
+        };
+        layout.RowStyles.Add(new RowStyle(SizeType.Absolute, 182F));
+        layout.RowStyles.Add(new RowStyle(SizeType.Absolute, 154F));
+        layout.RowStyles.Add(new RowStyle(SizeType.Percent, 100F));
+        layout.RowStyles.Add(new RowStyle(SizeType.Absolute, 126F));
+        card.Controls.Add(layout);
+
+        layout.Controls.Add(BuildDashboardActionsBlock(), 0, 0);
+        layout.Controls.Add(BuildDashboardTasksBlock(), 0, 1);
+        layout.Controls.Add(new Panel { Dock = DockStyle.Fill, BackColor = Color.Transparent }, 0, 2);
+        layout.Controls.Add(BuildLatestItemsCompactBlock(), 0, 3);
         return card;
+    }
+
+    private Control BuildDashboardActionsBlock()
+    {
+        var panel = new Panel { Dock = DockStyle.Fill, BackColor = Color.Transparent };
+        panel.Controls.Add(new Label { Text = "Acciones rapidas", AutoSize = true, Font = new Font("Segoe UI", 13F, FontStyle.Bold), ForeColor = Color.FromArgb(244, 247, 255), Location = new Point(0, 0) });
+
+        var grid = new TableLayoutPanel
+        {
+            Location = new Point(0, 36),
+            Size = new Size(350, 132),
+            Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right,
+            ColumnCount = 2,
+            RowCount = 3,
+            BackColor = Color.Transparent
+        };
+        grid.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 50F));
+        grid.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 50F));
+        for (var i = 0; i < 3; i++)
+        {
+            grid.RowStyles.Add(new RowStyle(SizeType.Percent, 33.33F));
+        }
+
+        grid.Controls.Add(MakeDashboardActionButton("Nueva nota", SaveNotes, true), 0, 0);
+        grid.Controls.Add(MakeDashboardActionButton("Nuevo devlog", PrepareContent), 1, 0);
+        grid.Controls.Add(MakeDashboardActionButton("Nueva idea", GenerateContentBankIdeas), 0, 1);
+        grid.Controls.Add(MakeDashboardActionButton("Agregar captura", ImportCaptures), 1, 1);
+        grid.Controls.Add(MakeDashboardActionButton("Agregar video", ImportVideos), 0, 2);
+        grid.Controls.Add(MakeDashboardActionButton("Content Bank", GenerateContentBankIdeas), 1, 2);
+        panel.Controls.Add(grid);
+        return panel;
+    }
+
+    private Control BuildDashboardTasksBlock()
+    {
+        var panel = new Panel { Dock = DockStyle.Fill, BackColor = Color.Transparent };
+        panel.Controls.Add(new Label { Text = "Para hacer hoy (3)", AutoSize = true, Font = new Font("Segoe UI", 12F, FontStyle.Bold), ForeColor = Color.FromArgb(255, 79, 216), Location = new Point(0, 4) });
+
+        var tasks = new TableLayoutPanel
+        {
+            Location = new Point(0, 36),
+            Size = new Size(350, 104),
+            Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right,
+            ColumnCount = 1,
+            RowCount = 3,
+            BackColor = Color.Transparent
+        };
+        for (var i = 0; i < 3; i++)
+        {
+            tasks.RowStyles.Add(new RowStyle(SizeType.Percent, 33.33F));
+        }
+
+        tasks.Controls.Add(MakeDashboardTaskRow("Pegar paquete completo", "Alta", Color.FromArgb(255, 103, 103)), 0, 0);
+        tasks.Controls.Add(MakeDashboardTaskRow("Analizar con Aiko", "Alta", Color.FromArgb(255, 103, 103)), 0, 1);
+        tasks.Controls.Add(MakeDashboardTaskRow("Revisar recomendacion", "Media", Color.FromArgb(255, 209, 102)), 0, 2);
+        panel.Controls.Add(tasks);
+        return panel;
+    }
+
+    private Control BuildLatestItemsCompactBlock()
+    {
+        var panel = new Panel
+        {
+            Dock = DockStyle.Fill,
+            BackColor = Color.FromArgb(13, 18, 36),
+            Padding = new Padding(12)
+        };
+        panel.Controls.Add(new Label { Text = "Ultimos elementos", AutoSize = true, Font = new Font("Segoe UI", 11F, FontStyle.Bold), ForeColor = Color.FromArgb(174, 184, 217), Location = new Point(12, 8) });
+        panel.Controls.Add(new Label { Text = "Ahora  Nota rapida guardada\nHoy    Diagnostico pendiente\nHoy    Content Bank local\nHoy    WordPress draft seguro", AutoSize = false, Size = new Size(320, 76), Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right, Font = new Font("Consolas", 8.8F), ForeColor = Color.FromArgb(174, 184, 217), Location = new Point(12, 38) });
+        return panel;
     }
 
     private Panel BuildPackageInputCard()
@@ -828,9 +903,9 @@ public partial class Form1 : Form
     private Button MakeDashboardActionButton(string text, Action action, bool primary = false)
     {
         var button = MakeButton(text, action, primary);
-        button.Width = 158;
-        button.Height = 36;
+        button.Dock = DockStyle.Fill;
         button.AutoSize = false;
+        button.Margin = new Padding(0, 4, 8, 4);
         button.TextAlign = ContentAlignment.MiddleLeft;
         if (button is IconButton iconButton)
         {
@@ -841,6 +916,43 @@ public partial class Form1 : Form
         }
 
         return button;
+    }
+
+    private Control MakeDashboardTaskRow(string text, string priority, Color priorityColor)
+    {
+        var row = new TableLayoutPanel
+        {
+            Dock = DockStyle.Fill,
+            ColumnCount = 2,
+            RowCount = 1,
+            BackColor = Color.Transparent,
+            Margin = new Padding(0, 2, 0, 2)
+        };
+        row.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100F));
+        row.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, 68F));
+
+        var check = new CheckBox
+        {
+            Text = text,
+            Dock = DockStyle.Fill,
+            ForeColor = Color.FromArgb(244, 247, 255),
+            Font = new Font("Segoe UI", 9F),
+            BackColor = Color.Transparent,
+            TextAlign = ContentAlignment.MiddleLeft
+        };
+        var tag = new Label
+        {
+            Text = priority,
+            Dock = DockStyle.Fill,
+            BackColor = priorityColor,
+            ForeColor = Color.FromArgb(7, 9, 20),
+            Font = new Font("Segoe UI", 8F, FontStyle.Bold),
+            TextAlign = ContentAlignment.MiddleCenter,
+            Margin = new Padding(8, 5, 0, 5)
+        };
+        row.Controls.Add(check, 0, 0);
+        row.Controls.Add(tag, 1, 0);
+        return row;
     }
 
     private void NavigateSidebar(string section)
