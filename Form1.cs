@@ -3,6 +3,7 @@ using System.Drawing.Drawing2D;
 using System.Net.Http.Headers;
 using System.Text;
 using System.Text.Json;
+using FontAwesome.Sharp;
 
 namespace AikoWebNewsApp;
 
@@ -187,8 +188,8 @@ public partial class Form1 : Form
 
         try
         {
-            using var icon = new Icon(iconPath);
-            Icon = (Icon)icon.Clone();
+            using var icon = new System.Drawing.Icon(iconPath);
+            Icon = (System.Drawing.Icon)icon.Clone();
         }
         catch (Exception ex)
         {
@@ -355,9 +356,9 @@ public partial class Form1 : Form
         };
         header.Controls.Add(today);
 
-        header.Controls.Add(MakeHeaderButton("Avisos", new Point(880, 22), () => SetStatus("Notificaciones: no hay avisos nuevos.")));
-        header.Controls.Add(MakeHeaderButton("Ayuda", new Point(952, 22), ShowUsageGuide));
-        header.Controls.Add(MakeHeaderButton("Ajustes", new Point(1024, 22), () => NavigateSidebar("Ajustes")));
+        header.Controls.Add(MakeHeaderButton("Avisos", new Point(850, 22), () => SetStatus("Notificaciones: no hay avisos nuevos.")));
+        header.Controls.Add(MakeHeaderButton("Ayuda", new Point(948, 22), ShowUsageGuide));
+        header.Controls.Add(MakeHeaderButton("Ajustes", new Point(1046, 22), () => NavigateSidebar("Ajustes")));
         return header;
     }
 
@@ -676,7 +677,7 @@ public partial class Form1 : Form
     private Button MakeHeaderButton(string text, Point location, Action action)
     {
         var button = MakeButton(text, action);
-        button.Width = text.Length > 2 ? 68 : 40;
+        button.Width = text.Length > 2 ? 92 : 48;
         button.Height = 34;
         button.Location = location;
         button.Font = new Font("Segoe UI", 9F, FontStyle.Bold);
@@ -865,6 +866,10 @@ public partial class Form1 : Form
             button.BackColor = isActive ? Color.FromArgb(55, 45, 110) : Color.FromArgb(16, 21, 40);
             button.FlatAppearance.BorderColor = isActive ? Color.FromArgb(255, 79, 216) : Color.FromArgb(38, 48, 82);
             button.ForeColor = isActive ? Color.White : Color.FromArgb(218, 226, 255);
+            if (button is IconButton iconButton)
+            {
+                iconButton.IconColor = isActive ? Color.FromArgb(255, 122, 218) : Color.FromArgb(174, 164, 230);
+            }
         }
     }
 
@@ -2212,6 +2217,13 @@ public partial class Form1 : Form
         button.Width = 176;
         button.Height = 34;
         button.TextAlign = ContentAlignment.MiddleLeft;
+        if (button is IconButton iconButton)
+        {
+            iconButton.TextAlign = ContentAlignment.MiddleLeft;
+            iconButton.ImageAlign = ContentAlignment.MiddleLeft;
+            iconButton.TextImageRelation = TextImageRelation.ImageBeforeText;
+            iconButton.IconSize = 15;
+        }
         button.BackColor = text == "Inicio" ? Color.FromArgb(55, 45, 110) : Color.FromArgb(16, 21, 40);
         button.FlatAppearance.BorderColor = text == "Inicio" ? Color.FromArgb(255, 79, 216) : Color.FromArgb(38, 48, 82);
         _sidebarButtons.Add(button);
@@ -2329,21 +2341,81 @@ public partial class Form1 : Form
 
     private Button MakeButton(string text, Action action, bool primary = false)
     {
-        var button = new Button
-        {
-            Text = text,
-            AutoSize = true,
-            Height = 36,
-            Margin = new Padding(0, 5, 8, 5),
-            Padding = new Padding(12, 4, 12, 4),
-            FlatStyle = FlatStyle.Flat,
-            BackColor = primary ? Color.FromArgb(113, 57, 217) : Color.FromArgb(30, 39, 72),
-            ForeColor = Color.White,
-            Cursor = Cursors.Hand
-        };
+        var icon = GetButtonIcon(text);
+        Button button = icon == IconChar.None
+            ? new Button()
+            : new IconButton
+            {
+                IconChar = icon,
+                IconColor = primary ? Color.White : Color.FromArgb(174, 164, 230),
+                IconSize = 16,
+                ImageAlign = ContentAlignment.MiddleLeft,
+                TextImageRelation = TextImageRelation.ImageBeforeText
+            };
+
+        button.Text = text;
+        button.AutoSize = true;
+        button.Height = 36;
+        button.Margin = new Padding(0, 5, 8, 5);
+        button.Padding = icon == IconChar.None ? new Padding(12, 4, 12, 4) : new Padding(10, 4, 12, 4);
+        button.FlatStyle = FlatStyle.Flat;
+        button.BackColor = primary ? Color.FromArgb(113, 57, 217) : Color.FromArgb(30, 39, 72);
+        button.ForeColor = Color.White;
+        button.Cursor = Cursors.Hand;
         button.FlatAppearance.BorderColor = primary ? Color.FromArgb(255, 122, 218) : Color.FromArgb(74, 111, 170);
         button.Click += (_, _) => SafeRun(action);
         return button;
+    }
+
+    private static IconChar GetButtonIcon(string text)
+    {
+        var normalized = text.Replace(Environment.NewLine, " ", StringComparison.Ordinal).Trim();
+        return normalized switch
+        {
+            "Inicio" => IconChar.House,
+            "Notas del Dia" or "Ir a Notas del Dia" => IconChar.PenToSquare,
+            "Devlogs" => IconChar.Newspaper,
+            "Discord" => IconChar.Comments,
+            "X (Twitter)" or "X" => IconChar.ShareNodes,
+            "TikTok / Shorts" => IconChar.Video,
+            "itch.io" => IconChar.Gamepad,
+            "Ideas / Content Bank" or "Banco de ideas" => IconChar.Lightbulb,
+            "Tareas" => IconChar.ListCheck,
+            "Calendario" => IconChar.CalendarDays,
+            "Archivos y Material" or "Material" => IconChar.FolderOpen,
+            "Estado del Proyecto" => IconChar.ChartLine,
+            "Ajustes" or "Abrir Config" => IconChar.Gear,
+            "Ayuda" => IconChar.CircleQuestion,
+            "Avisos" => IconChar.Bell,
+            "Analizar con Aiko" => IconChar.WandMagicSparkles,
+            "Generar paquete para Aiko" or "Copiar paquete para Aiko" or "Pegar paquete completo" => IconChar.BoxArchive,
+            "Generar Content Bank" or "Nueva idea" or "Content Bank" => IconChar.Lightbulb,
+            "Crear borrador draft" or "Crear borrador WordPress draft" or "Crear borrador WordPress" => IconChar.FilePen,
+            "Abrir carpeta Salida" or "Abrir salida del dia" or "Abrir carpeta del dia" or "Abrir carpeta de material" or "Abrir Capturas" or "Abrir Videos" or "Abrir Plantillas" or "Abrir Logs" => IconChar.FolderOpen,
+            "Importar capturas" or "Agregar captura" => IconChar.Image,
+            "Importar videos" or "Agregar video" => IconChar.Video,
+            "Guardar nota" or "Nueva nota" or "Guardar respuesta de Aiko" => IconChar.FloppyDisk,
+            "Nuevo devlog" => IconChar.Newspaper,
+            "Ver detalles" or "Ver idea completa" => IconChar.CircleInfo,
+            "Copiar resultado" or "Copiar entrada web" or "Copiar Discord" or "Copiar X" => IconChar.Copy,
+            _ when normalized.Contains("Analizar", StringComparison.OrdinalIgnoreCase) => IconChar.WandMagicSparkles,
+            _ when normalized.Contains("Content Bank", StringComparison.OrdinalIgnoreCase) => IconChar.Lightbulb,
+            _ when normalized.Contains("borrador", StringComparison.OrdinalIgnoreCase) => IconChar.FilePen,
+            _ when normalized.Contains("carpeta", StringComparison.OrdinalIgnoreCase) || normalized.Contains("Abrir", StringComparison.OrdinalIgnoreCase) => IconChar.FolderOpen,
+            _ => IconChar.None
+        };
+    }
+
+    private static void ApplyButtonIcon(Button button, string text, bool primary = false)
+    {
+        if (button is not IconButton iconButton)
+        {
+            return;
+        }
+
+        iconButton.IconChar = GetButtonIcon(text);
+        iconButton.IconColor = primary ? Color.White : Color.FromArgb(174, 164, 230);
+        iconButton.IconSize = 16;
     }
 
     private void SafeRun(Action action)
@@ -3985,6 +4057,7 @@ public partial class Form1 : Form
         _nextStepCompletedLabel.Text = completed;
         _nextStepNowLabel.Text = now;
         _nextStepPrimaryButton.Text = button;
+        ApplyButtonIcon(_nextStepPrimaryButton, button, true);
         _nextStepPrimaryAction = action;
     }
 
